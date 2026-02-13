@@ -1,25 +1,22 @@
 const mongoose = require('mongoose');
 
-const PatientSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  age: Number,
-  gender: String,
-  history: [String], // e.g., ["Diabetes", "Hypertension"]
-  // This array stores their health over time (The "Longitudinal" part)
-  records: [{
-    date: { type: Date, default: Date.now },
-    vitals: {
-      bmi: Number,
-      glucose: Number,
-      bp: String, // "120/80"
-      heartRate: Number
-    },
-    riskAnalysis: {
-      score: Number, // 0-100
-      riskLevel: String, // "Low", "Medium", "High"
-      factors: [String] // "High Glucose", "Obesity"
-    }
-  }]
-});
+const patientDataSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Link to Patient User
+  vitals: {
+    age: Number,
+    bmi: Number,
+    glucose: Number,
+    bp_systolic: Number,
+    bp_diastolic: Number,
+    heartRate: Number
+  },
+  aiAnalysis: {
+    riskScore: Number, // 0-100
+    riskLevel: String, // "Low", "Moderate", "High"
+    confidence: Number, // e.g., 0.95
+    factors: [String] // ["High BMI", "Elevated Glucose"]
+  },
+  doctorNotes: String
+}, { timestamps: true });
 
-module.exports = mongoose.model('Patient', PatientSchema);
+module.exports = mongoose.model('PatientData', patientDataSchema);
