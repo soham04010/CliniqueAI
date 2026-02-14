@@ -84,7 +84,7 @@ const getPatients = async (req, res) => {
 const simulateRisk = async (req, res) => {
   const { inputs } = req.body; 
   try {
-    const response = await axios.post('http://127.0.0.1:8000/predict', inputs);
+    const response = await axios.post('http://127.0.0.1:5001/predict', inputs);
     res.status(200).json(response.data);
   } catch (error) {
     res.status(200).json({ riskScore: 0, riskLevel: "Error" });
