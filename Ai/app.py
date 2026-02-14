@@ -22,6 +22,16 @@ except Exception as e:
     print(f"❌ Scaler Load Failed: {e}")
     scaler = None
 
+# Load Scaler
+print("⏳ Loading Scaler...")
+try:
+    with open('scaler.pkl', 'rb') as f:
+        scaler = joblib.load(f)
+    print("✅ Scaler Loaded")
+except Exception as e:
+    print(f"❌ Scaler Load Failed: {e}")
+    scaler = None
+
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.json
@@ -48,16 +58,17 @@ def predict():
     smoke_not_current = 1 if smoking == 'not current' else 0
 
     # FINAL FEATURE ARRAY (12 Columns)
-    # Order: age, hypertension, heart_disease, bmi, HbA1c, glucose, 
-    #        gender_Male, smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
+    # Corrected Order based on Scaler Analysis:
+    # gender, age, hypertension, heart_disease, bmi, HbA1c, glucose, 
+    # smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
     features = [
+        gender_male,
         age, 
         hypertension, 
         heart_disease, 
         bmi, 
         hba1c, 
         glucose, 
-        gender_male,
         smoke_current, 
         smoke_ever, 
         smoke_former, 
@@ -66,10 +77,14 @@ def predict():
     ]
 
     try:
-        if model:
+        if model and scaler:
             features_arr = np.array([features])
-            prediction = model.predict(features_arr)
-            probability = model.predict_proba(features_arr)[0][1]
+            
+            # SCALING INPUT
+            features_scaled = scaler.transform(features_arr)
+            
+            prediction = model.predict(features_scaled)
+            probability = model.predict_proba(features_scaled)[0][1]
             score = float(probability) * 100 # Exact score, no rounding
         else:
             # Fallback Logic
