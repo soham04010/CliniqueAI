@@ -4,36 +4,48 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const seedDoctors = require('./utils/seedDoctors');
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
 
-// 1. ALLOW FRONTEND CONNECTION (CORS)
+// 1. CORS Configuration
+// Allows your Frontend (Port 3000) to talk to this Backend
 app.use(cors({
-  origin: "http://localhost:3000", // Allow Next.js frontend
+  origin: "http://localhost:3000",
   credentials: true
 }));
 
+// 2. Middleware to parse JSON bodies
 app.use(express.json());
 
-// 2. CONNECT DATABASE
+// 3. Database Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB Connected');
-    // Run the doctor seeder on startup
+    // Run Seeder to ensure Doctor accounts exist
     seedDoctors(); 
   })
-  .catch(err => console.log('❌ DB Connection Error:', err));
+  .catch(err => {
+    console.error('❌ DB Connection Error:', err.message);
+    // Don't crash the server, just log the error
+  });
 
-// 3. ROUTES
+// 4. API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
-// app.use('/api/patients', require('./routes/patientRoutes'));
+app.use('/api/patients', require('./routes/patientRoutes')); // AI & Patient Data
 
-// 4. GLOBAL ERROR HANDLER
+// 5. Global Error Handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Server Error', error: err.message });
+  console.error("🔥 Server Error:", err.stack);
+  res.status(500).json({ 
+    message: 'Internal Server Error', 
+    error: err.message 
+  });
 });
 
+// 6. Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
