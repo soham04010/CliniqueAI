@@ -21,12 +21,13 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB Connected');
     // Run the doctor seeder on startup
-    seedDoctors(); 
+    seedDoctors();
   })
   .catch(err => console.log('❌ DB Connection Error:', err));
 
 // 3. ROUTES
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes')); // Register AI Routes
 // app.use('/api/patients', require('./routes/patientRoutes'));
 
 // 4. GLOBAL ERROR HANDLER
