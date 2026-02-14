@@ -3,7 +3,8 @@ const PatientData = require('../models/PatientData');
 
 // @desc    Predict Risk
 const predictRisk = async (req, res) => {
-  const { name, inputs } = req.body; 
+  // Added doctor_id to destructuring
+  const { name, inputs, doctor_id } = req.body; 
   const userId = req.user._id;
   const userRole = req.user.role;
 
@@ -34,6 +35,8 @@ const predictRisk = async (req, res) => {
       recordData.doctor_id = userId;
     } else {
       recordData.patient_id = userId;
+      // Link the record to the selected doctor if provided by the patient
+      if (doctor_id) recordData.doctor_id = doctor_id;
     }
 
     const newRecord = await PatientData.create(recordData);
@@ -44,7 +47,8 @@ const predictRisk = async (req, res) => {
   }
 };
 
-// @desc    Get Single Assessment by ID
+// ... Rest of the functions (getPatientById, getPatientHistory, getPatients, simulateRisk) 
+// remain EXACTLY as per your provided code.
 const getPatientById = async (req, res) => {
   try {
     const patient = await PatientData.findById(req.params.id);
@@ -55,22 +59,18 @@ const getPatientById = async (req, res) => {
   }
 };
 
-// @desc    Get Full History by Patient Name (Longitudinal Tracking)
 const getPatientHistory = async (req, res) => {
   const { name } = req.params;
   try {
-    // Find all records with this name, sorted by date (Oldest -> Newest)
     const history = await PatientData.find({ name: decodeURIComponent(name) })
       .sort({ createdAt: 1 })
       .select('prediction.riskScore createdAt inputs');
-      
     res.json(history);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Get Recent Patients List
 const getPatients = async (req, res) => {
   try {
     const query = req.user.role === 'doctor' ? { doctor_id: req.user._id } : { patient_id: req.user._id };
@@ -81,7 +81,6 @@ const getPatients = async (req, res) => {
   }
 };
 
-// @desc    Simulate Risk
 const simulateRisk = async (req, res) => {
   const { inputs } = req.body; 
   try {
