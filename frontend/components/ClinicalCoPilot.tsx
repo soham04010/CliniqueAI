@@ -45,7 +45,11 @@ export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
 
             const { data } = await api.post('/patients/copilot', payload);
 
-            const aiMsg = { role: 'assistant', content: data.reply };
+            let replyText = data.reply;
+            // distinct percentage formatting
+            replyText = replyText.replace(/(\d+\.\d{2,})%/g, (match: string, p1: string) => `${parseFloat(p1).toFixed(1)}%`);
+
+            const aiMsg = { role: 'assistant', content: replyText };
             setMessages(prev => [...prev, aiMsg]);
 
         } catch (err) {
