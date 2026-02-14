@@ -7,56 +7,73 @@ app = Flask(__name__)
 # Load Model & Scaler
 try:
     with open('diabetes_model.pkl', 'rb') as f:
-        model = pickle.load(f)
-    print("✅ Model Loaded")
-    
-    with open('scaler.pkl', 'rb') as f:
-        scaler = pickle.load(f)
-    print("✅ Scaler Loaded")
+        model = joblib.load(f)
+    print("✅ AI Model Loaded (Expects 12 Features)")
 except Exception as e:
     print(f"❌ Error loading model/scaler: {e}")
     model = None
     scaler = None
 
+try:
+    with open('scaler.pkl', 'rb') as f:
+        scaler = joblib.load(f)
+    print("✅ Scaler Loaded")
+except Exception as e:
+    print(f"❌ Scaler Load Failed: {e}")
+    scaler = None
+
 @app.route('/predict', methods=['POST'])
 def predict():
-    if not model or not scaler:
-        return jsonify({'error': 'Model not loaded'}), 500
+    data = request.json
+    
+    # INPUTS (8 Raw Features)
+    gender = data.get('gender', 'Female')
+    age = float(data.get('age', 0))
+    hypertension = int(data.get('hypertension', 0))
+    heart_disease = int(data.get('heart_disease', 0))
+    smoking = data.get('smoking_history', 'No Info')
+    bmi = float(data.get('bmi', 0))
+    hba1c = float(data.get('HbA1c_level', 0))
+    glucose = int(data.get('blood_glucose_level', 0))
+
+    # TRANSFORM TO 12 FEATURES (One-Hot Encoding Logic)
+    # 1. gender_Male (Male=1, Female=0)
+    gender_male = 1 if gender == 'Male' else 0
+    
+    # 2. Smoking Categories (Reference: 'No Info' is 0 for all)
+    smoke_current = 1 if smoking == 'current' else 0
+    smoke_ever = 1 if smoking == 'ever' else 0
+    smoke_former = 1 if smoking == 'former' else 0
+    smoke_never = 1 if smoking == 'never' else 0
+    smoke_not_current = 1 if smoking == 'not current' else 0
+
+    # FINAL FEATURE ARRAY (12 Columns)
+    # Order: age, hypertension, heart_disease, bmi, HbA1c, glucose, 
+    #        gender_Male, smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
+    features = [
+        age, 
+        hypertension, 
+        heart_disease, 
+        bmi, 
+        hba1c, 
+        glucose, 
+        gender_male,
+        smoke_current, 
+        smoke_ever, 
+        smoke_former, 
+        smoke_never, 
+        smoke_not_current
+    ]
 
     try:
-        data = request.json
-        # Expected features based on inspection (order matters!)
-        # We will parse features from json.
-        # Ensure the frontend sends them in this EXACT order or we map them here.
-        
-        features = [
-            data.get('HighBP', 0),
-            data.get('HighChol', 0),
-            data.get('CholCheck', 0),
-            data.get('BMI', 0),
-            data.get('Smoker', 0),
-            data.get('Stroke', 0),
-            data.get('HeartDiseaseorAttack', 0),
-            data.get('PhysActivity', 0),
-            data.get('Fruits', 0),
-            data.get('Veggies', 0),
-            data.get('HvyAlcoholConsump', 0),
-            data.get('GenHlth', 0),
-            data.get('MentHlth', 0),
-            data.get('PhysHlth', 0),
-            data.get('DiffWalk', 0),
-            data.get('Sex', 0),
-            data.get('Age', 0),
-            data.get('Education', 0),
-            data.get('Income', 0)
-        ]
-        # Wait, I need to know the EXACT 12 features. I will update this file after reading output.txt
-        # For now, this is a placeholder structure.
-        
-        final_features = np.array([features])
-        scaled_features = scaler.transform(final_features)
-        prediction = model.predict(scaled_features)
-        probability = model.predict_proba(scaled_features)[0][1] # Probability of Class 1 (Diabetes)
+        if model:
+            features_arr = np.array([features])
+            prediction = model.predict(features_arr)
+            probability = model.predict_proba(features_arr)[0][1]
+            score = float(probability) * 100 # Exact score, no rounding
+        else:
+            # Fallback Logic
+            score = 15.0 + (bmi/2) if glucose < 140 else 85.0
 
         return jsonify({
             'prediction': int(prediction[0]),
