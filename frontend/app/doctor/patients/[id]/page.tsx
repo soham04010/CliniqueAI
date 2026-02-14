@@ -5,27 +5,28 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { 
-  ArrowLeft, 
-  Activity, 
-  TrendingDown, 
-  RefreshCw, 
-  Loader2, 
-  AlertCircle, 
-  CheckCircle, 
-  FileDown 
+import {
+  ArrowLeft,
+  Activity,
+  TrendingDown,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  FileDown
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
 import api from "@/lib/api";
 import ChatBox from "@/components/ChatBox";
+import ClinicalCoPilot from "@/components/ClinicalCoPilot";
 import { generatePatientReport } from "@/lib/generatePDF";
 
 export default function PatientDetailsPage() {
@@ -139,8 +140,8 @@ export default function PatientDetailsPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
           {/* DOWNLOAD PDF BUTTON */}
-          <Button 
-            onClick={() => generatePatientReport(patient)} 
+          <Button
+            onClick={() => generatePatientReport(patient)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 shadow-lg shadow-emerald-500/10"
           >
             <FileDown size={18} /> Download Report
@@ -156,7 +157,7 @@ export default function PatientDetailsPage() {
 
         {/* Left & Middle Column: Clinical Data, Insights & Chart */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-3 gap-4">
             <Card className="bg-slate-900 border-slate-800 text-white hover:border-blue-500/30 transition-colors">
@@ -180,7 +181,7 @@ export default function PatientDetailsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {/* AI Clinical Insights Card */}
+            {/* AI Clinical Insights Card */}
             <Card className="bg-slate-900 border-slate-800 text-white shadow-xl h-full">
               <CardHeader className="pb-2 border-b border-slate-800/50 mb-4">
                 <CardTitle className="flex items-center gap-2 text-sm font-bold text-teal-400">
@@ -202,29 +203,29 @@ export default function PatientDetailsPage() {
 
             {/* Longitudinal Tracking Graph Card */}
             <Card className="bg-slate-900 border-slate-800 text-white shadow-xl h-[280px]">
-               <CardHeader className="pb-1"><CardTitle className="text-[10px] text-slate-500 uppercase font-black">History Trend</CardTitle></CardHeader>
-               <CardContent className="h-[200px] p-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={history}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} />
-                      <YAxis stroke="#475569" domain={[0, 100]} fontSize={10} tickLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }} />
-                      <Line type="monotone" dataKey="score" stroke="#2dd4bf" strokeWidth={3} dot={{r: 4, fill: '#2dd4bf', strokeWidth: 0}} activeDot={{r: 6}} />
-                    </LineChart>
-                  </ResponsiveContainer>
-               </CardContent>
+              <CardHeader className="pb-1"><CardTitle className="text-[10px] text-slate-500 uppercase font-black">History Trend</CardTitle></CardHeader>
+              <CardContent className="h-[200px] p-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={history}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} />
+                    <YAxis stroke="#475569" domain={[0, 100]} fontSize={10} tickLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }} />
+                    <Line type="monotone" dataKey="score" stroke="#2dd4bf" strokeWidth={3} dot={{ r: 4, fill: '#2dd4bf', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
             </Card>
           </div>
 
           {/* REAL-TIME SECURE CHAT */}
           {patient?.patient_id ? (
             <div className="animate-in slide-in-from-bottom-4 duration-700">
-              <ChatBox 
-                senderId={doctor.id || doctor._id} 
-                senderName={doctor.name} 
-                receiverId={patient.patient_id} 
-                receiverName={patient.name} 
+              <ChatBox
+                senderId={doctor.id || doctor._id}
+                senderName={doctor.name}
+                receiverId={patient.patient_id}
+                receiverName={patient.name}
               />
             </div>
           ) : (
@@ -242,13 +243,13 @@ export default function PatientDetailsPage() {
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-teal-400 to-blue-600"></div>
             <CardHeader className="pt-8">
               <CardTitle className="flex items-center gap-2 font-black italic tracking-tighter">
-                <TrendingDown className="h-6 w-6 text-blue-500" /> 
+                <TrendingDown className="h-6 w-6 text-blue-500" />
                 RISK SIMULATOR
               </CardTitle>
               <p className="text-[9px] text-slate-500 uppercase font-black tracking-[0.2em]">Preventive Intervention Tool</p>
             </CardHeader>
             <CardContent className="space-y-8">
-              
+
               <div className="text-center p-8 bg-slate-950 rounded-3xl border border-slate-800/50 shadow-inner">
                 <p className="text-[10px] text-slate-500 uppercase font-bold mb-2 tracking-widest">Target Risk Projection</p>
                 <div className="text-6xl font-black text-white tracking-tighter drop-shadow-[0_0_15px_rgba(45,212,191,0.3)]">
@@ -284,8 +285,8 @@ export default function PatientDetailsPage() {
                   <input type="range" min="15" max="50" step="0.5" value={simFactors.bmi} onChange={(e) => setSimFactors({ ...simFactors, bmi: Number(e.target.value) })} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500" />
                 </div>
 
-                <Button 
-                  onClick={runSimulation} 
+                <Button
+                  onClick={runSimulation}
                   className="w-full bg-blue-600 hover:bg-blue-500 h-14 text-sm font-black tracking-widest shadow-xl shadow-blue-500/20 mt-4 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" /> COMPUTE PROJECTION
@@ -296,6 +297,7 @@ export default function PatientDetailsPage() {
           </Card>
         </div>
       </div>
+      <ClinicalCoPilot patientContext={patient} />
     </div>
   );
 }

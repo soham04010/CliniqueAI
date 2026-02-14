@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Activity, LogOut, Loader2, PlusCircle, AlertTriangle, CheckCircle, MessageSquare } from "lucide-react";
 import api from "@/lib/api";
+import ClinicalCoPilot from "@/components/ClinicalCoPilot";
 
 export default function DoctorDashboard() {
   const router = useRouter();
@@ -202,6 +203,7 @@ export default function DoctorDashboard() {
           </div>
         </CardContent>
       </Card>
+      <ClinicalCoPilot />
     </div>
   );
 }

@@ -8,9 +8,16 @@ import api from "@/lib/api";
 
 const socket = io("http://localhost:5000");
 
-export default function ChatBox() {
+interface ChatBoxProps {
+  senderId?: string;
+  senderName?: string;
+  receiverId?: string;
+  receiverName?: string;
+}
+
+export default function ChatBox({ senderId, receiverId, receiverName }: ChatBoxProps) {
   const router = useRouter();
-  const [activeChat, setActiveChat] = useState<any>(null);
+  const [activeChat, setActiveChat] = useState<any>(receiverId ? { _id: receiverId, name: receiverName } : null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -30,7 +37,7 @@ export default function ChatBox() {
       try {
         const { data } = await api.get("/auth/contacts");
         setContacts(data);
-      } catch (e) { console.error("Failed to load contacts"); } 
+      } catch (e) { console.error("Failed to load contacts"); }
       finally { setLoading(false); }
     };
     fetchContacts();
