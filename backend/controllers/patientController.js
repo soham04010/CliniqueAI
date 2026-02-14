@@ -1,5 +1,6 @@
 const axios = require('axios');
 const PatientData = require('../models/PatientData');
+const CoPilotChat = require('../models/CoPilotChat'); // Import CoPilot Chat Model
 
 // @desc    Predict Risk
 const predictRisk = async (req, res) => {
@@ -91,4 +92,61 @@ const simulateRisk = async (req, res) => {
   }
 };
 
-module.exports = { predictRisk, getPatients, getPatientById, getPatientHistory, simulateRisk };
+const copilotRequest = async (req, res) => {
+  const { message, context } = req.body;
+  const userId = req.user._id;
+  const patientId = context._id || context.id; // Try to extract patient ID if available
+
+  try {
+    // 1. Fetch Patient History if Name is available
+    if (context.name) {
+      const history = await PatientData.find({ name: context.name })
+        .sort({ createdAt: 1 })
+        .limit(10) // Get last 10 records for trend analysis
+        .select('prediction.riskScore createdAt inputs');
+
+      context.history = history;
+    }
+
+    // 2. Forward to Python AI Service
+    const response = await axios.post('http://127.0.0.1:5001/copilot', { message, context });
+    const aiReply = response.data.reply;
+
+    // 2. Save Chat History if Patient Context Exists
+    if (patientId) {
+      // Find existing chat or create new
+      let chat = await CoPilotChat.findOne({ userId, patientId });
+
+      if (!chat) {
+        chat = new CoPilotChat({ userId, patientId, messages: [] });
+      }
+
+      // Add User Message
+      chat.messages.push({ role: 'user', content: message });
+      // Add AI Response
+      chat.messages.push({ role: 'assistant', content: aiReply });
+
+      await chat.save();
+    }
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error("AI Service Error:", error.message);
+    res.status(500).json({ reply: "I'm having trouble connecting to my clinical brain right now." });
+  }
+};
+
+const getCoPilotHistory = async (req, res) => {
+  const { patientId } = req.params;
+  const userId = req.user._id;
+
+  try {
+    const chat = await CoPilotChat.findOne({ userId, patientId });
+    if (!chat) return res.json([]);
+    res.json(chat.messages);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to load history" });
+  }
+};
+
+module.exports = { predictRisk, getPatients, getPatientById, getPatientHistory, simulateRisk, copilotRequest, getCoPilotHistory };
