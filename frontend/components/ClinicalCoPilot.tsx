@@ -16,14 +16,14 @@ export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState<any[]>([
-        { role: 'system', content: "Hello Dr. I am your AI Clinical Co-Pilot. I can explain risk factors, summarize trends, or suggest interventions based on the active patient context." }
+        { role: 'system', content: "Hello. I am your AI Clinical Co-Pilot. I can explain risk factors, summarize trends, or suggest interventions based on the active patient context." }
     ]);
     const [loading, setLoading] = useState(false);
     const pathname = usePathname();
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Only show on Doctor pages
-    if (!pathname.includes("/doctor")) return null;
+    // Only show on Doctor pages or Patient Dashboard
+    if (!pathname.includes("/doctor") && !pathname.includes("/patient")) return null;
 
     const handleSend = async (text: string = input) => {
         if (!text.trim()) return;
@@ -100,14 +100,14 @@ export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
             {!isOpen && (
                 <Button
                     onClick={() => setIsOpen(true)}
-                    className="fixed bottom-6 left-6 h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform z-50 flex items-center justify-center border-2 border-white/20"
+                    className="fixed bottom-4 right-4 md:bottom-6 md:left-6 h-12 w-12 md:h-14 md:w-14 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform z-50 flex items-center justify-center border-2 border-white/20"
                 >
                     <BrainCircuit className="h-7 w-7 text-white" />
                 </Button>
             )}
 
             {/* Sliding Panel */}
-            <div className={`fixed top-0 left-0 h-full w-[400px] bg-slate-950 border-r border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+            <div className={`fixed top-0 left-0 h-full w-full md:w-[400px] bg-slate-950 border-r border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
 
                 {/* Header */}
                 <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center backdrop-blur-md">

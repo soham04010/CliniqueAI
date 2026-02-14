@@ -58,19 +58,19 @@ const getPatients = async (req, res) => {
 
     const patients = await PatientData.aggregate([
       {
-        $match: userRole === 'doctor' 
-          ? { doctor_id: searchId } 
+        $match: userRole === 'doctor'
+          ? { doctor_id: searchId }
           : { patient_id: searchId }
       },
-      { $sort: { createdAt: -1 } }, 
+      { $sort: { createdAt: -1 } },
       {
         $group: {
           _id: "$name", // Collapse all records with the same name
-          latestRecord: { $first: "$$ROOT" } 
+          latestRecord: { $first: "$$ROOT" }
         }
       },
-      { $replaceRoot: { newRoot: "$latestRecord" } }, 
-      { $sort: { createdAt: -1 } } 
+      { $replaceRoot: { newRoot: "$latestRecord" } },
+      { $sort: { createdAt: -1 } }
     ]);
 
     res.json(patients);
@@ -118,21 +118,23 @@ const simulateRisk = async (req, res) => {
 const copilotRequest = async (req, res) => {
   const { message, context } = req.body;
   const userId = req.user._id;
-  const patientId = context._id || context.id; 
+  const patientId = context._id || context.id;
 
   try {
     // 1. Fetch Patient History if Name is available
     if (context.name) {
       const history = await PatientData.find({ name: context.name })
         .sort({ createdAt: 1 })
-        .limit(10) 
+        .limit(10)
         .select('prediction.riskScore createdAt inputs');
 
       context.history = history;
     }
 
     // 2. Forward to Python AI Service
-    const response = await axios.post('http://127.0.0.1:5001/copilot', { message, context });
+    // Pass user role (doctor/patient) to enable persona switching
+    const role = req.user.role || 'patient';
+    const response = await axios.post('http://127.0.0.1:5001/copilot', { message, context, role });
     const aiReply = response.data.reply;
 
     // 3. Save Chat History if Patient Context Exists
@@ -174,9 +176,9 @@ const getCoPilotHistory = async (req, res) => {
 const deletePatient = async (req, res) => {
   try {
     const { name } = req.params;
-    await PatientData.deleteMany({ 
-        name: decodeURIComponent(name), 
-        doctor_id: req.user._id 
+    await PatientData.deleteMany({
+      name: decodeURIComponent(name),
+      doctor_id: req.user._id
     });
     res.json({ message: "Patient history deleted successfully" });
   } catch (error) {
@@ -184,13 +186,13 @@ const deletePatient = async (req, res) => {
   }
 };
 
-module.exports = { 
-  predictRisk, 
-  getPatients, 
-  getPatientById, 
-  getPatientHistory, 
-  simulateRisk, 
-  copilotRequest, 
+module.exports = {
+  predictRisk,
+  getPatients,
+  getPatientById,
+  getPatientHistory,
+  simulateRisk,
+  copilotRequest,
   getCoPilotHistory,
-  deletePatient 
+  deletePatient
 };
