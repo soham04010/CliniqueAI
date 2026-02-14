@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getPatients, addRecord, getPatientHistory } = require('../controllers/patientController');
-const { protect } = require('../middleware/authMiddleware');
+const { predictRisk, getPatients, getPatientById, getPatientHistory, simulateRisk } = require('../controllers/patientController');
+const { protect } = require('../middleware/auth'); 
 
-// All routes are protected
-router.get('/', protect, getPatients); // Doctor gets list
-router.post('/record', protect, addRecord); // Add new vitals
-router.get('/:id/history', protect, getPatientHistory); // Get specific patient data
+router.post('/predict', protect, predictRisk);
+router.post('/simulate', protect, simulateRisk);
+router.get('/', protect, getPatients);
+router.get('/:id', protect, getPatientById);
+router.get('/history/:name', protect, getPatientHistory); // NEW ROUTE
 
 module.exports = router;
