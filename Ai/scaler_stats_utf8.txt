@@ -1,0 +1,17 @@
+SCALER STATISTICS ANALYSIS
+------------------------------------------------------------
+Number of Features: 12
+Index | Mean       | Scale      | Inference Guess
+------+------------+------------+-----------------
+    0 |     0.4153 |     0.4928 | Binary (Gender/Hyp/Heart/Smoke)?
+    1 |    41.8947 |    22.5224 | Age?
+    2 |     0.0755 |     0.2642 | Binary (Gender/Hyp/Heart/Smoke)?
+    3 |     0.0399 |     0.1956 | Binary (Gender/Hyp/Heart/Smoke)?
+    4 |    27.3102 |     6.6362 | BMI?
+    5 |     5.5308 |     1.0676 | HbA1c?
+    6 |   138.1336 |    40.6223 | Glucose?
+    7 |     0.0924 |     0.2897 | Binary (Gender/Hyp/Heart/Smoke)?
+    8 |     0.0396 |     0.1951 | Binary (Gender/Hyp/Heart/Smoke)?
+    9 |     0.0940 |     0.2919 | Binary (Gender/Hyp/Heart/Smoke)?
+   10 |     0.3501 |     0.4770 | Binary (Gender/Hyp/Heart/Smoke)?
+   11 |     0.0655 |     0.2474 | Binary (Gender/Hyp/Heart/Smoke)?
