@@ -5,7 +5,7 @@ const PatientDataSchema = new mongoose.Schema({
   doctor_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   patient_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false }, // Link to Patient Account
   name: { type: String, required: true },
-  
+
   inputs: {
     gender: { type: String, required: true },
     age: { type: Number, required: true },
@@ -20,7 +20,9 @@ const PatientDataSchema = new mongoose.Schema({
   prediction: {
     riskScore: Number,
     riskLevel: String,
-    timestamp: { type: Date, default: Date.now }
+    timestamp: { type: Date, default: Date.now },
+    confidenceScore: Number,
+    confidenceLabel: String
   }
 }, { timestamps: true });
 

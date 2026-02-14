@@ -233,7 +233,17 @@ export default function DoctorDashboard() {
               ) : (
                 <div className="text-center py-6 space-y-6 animate-in zoom-in duration-300">
                   <div className={`text-7xl font-black ${aiResult.riskLevel === 'High' ? 'text-red-500' : 'text-emerald-400'}`}>{(aiResult.riskScore || 0).toFixed(4)}%</div>
-                  <div className="text-xs uppercase tracking-widest text-slate-500 font-bold">{aiResult.riskLevel} Clinical Risk Detected</div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="text-xs uppercase tracking-widest text-slate-500 font-bold">{aiResult.riskLevel} Clinical Risk Detected</div>
+                    {aiResult.confidenceLabel && (
+                      <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${aiResult.confidenceLabel === 'High' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                          aiResult.confidenceLabel === 'Moderate' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/10 border-red-500/20 text-red-400'
+                        }`}>
+                        Model Confidence: {aiResult.confidenceLabel}
+                      </div>
+                    )}
+                  </div>
                   <Button onClick={() => { setIsAiOpen(false); setAiResult(null); }} className="w-full border-slate-700 text-white hover:bg-slate-800">Close & Save to History</Button>
                 </div>
               )}
