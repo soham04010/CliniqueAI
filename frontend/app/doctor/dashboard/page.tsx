@@ -17,11 +17,11 @@ export default function DoctorDashboard() {
   const [doctorName, setDoctorName] = useState("");
   const [loading, setLoading] = useState(true);
   const [patients, setPatients] = useState<any[]>([]);
-  
+
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
-  
+
   const [aiForm, setAiForm] = useState({
     name: "", gender: "Female", age: "", hypertension: "0",
     heart_disease: "0", smoking_history: "never", bmi: "",
@@ -31,14 +31,14 @@ export default function DoctorDashboard() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
-    
+
     if (!token || !userStr) { router.push("/login"); return; }
-    
+
     try {
       const user = JSON.parse(userStr);
       if (user.role !== "doctor") { router.push("/login"); return; }
       setDoctorName(user.name);
-      fetchPatients(); 
+      fetchPatients();
       setLoading(false);
     } catch (e) {
       localStorage.clear();
@@ -167,7 +167,7 @@ export default function DoctorDashboard() {
                 </form>
               ) : (
                 <div className="text-center py-6 space-y-6">
-                  <div className={`text-7xl font-black ${aiResult.riskLevel === 'High' ? 'text-red-500' : 'text-emerald-400'}`}>{aiResult.riskScore.toFixed(1)}%</div>
+                  <div className={`text-7xl font-black ${aiResult.riskLevel === 'High' ? 'text-red-500' : 'text-emerald-400'}`}>{(aiResult.riskScore || 0).toFixed(1)}%</div>
                   <Button onClick={() => { setIsAiOpen(false); setAiResult(null); }} className="w-full border-slate-700 text-white hover:bg-slate-800">Close & Save</Button>
                 </div>
               )}
@@ -194,7 +194,7 @@ export default function DoctorDashboard() {
                   <div><p className="font-semibold text-white group-hover:text-blue-400 transition-colors">{p.name}</p><p className="text-xs text-slate-500">BMI: {p.inputs?.bmi} | Age: {p.inputs?.age}</p></div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-right"><p className="text-xs text-slate-500">Risk Probability</p><p className="font-mono font-bold text-lg">{p.prediction?.riskScore.toFixed(1)}%</p></div>
+                  <div className="text-right"><p className="text-xs text-slate-500">Risk Probability</p><p className="font-mono font-bold text-lg">{(p.prediction?.riskScore || 0).toFixed(1)}%</p></div>
                   <div className={`px-4 py-1.5 rounded-full text-xs font-bold border ${p.prediction?.riskLevel === 'High' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>{p.prediction?.riskLevel}</div>
                 </div>
               </div>

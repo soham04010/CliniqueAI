@@ -4,7 +4,7 @@ const PatientData = require('../models/PatientData');
 // @desc    Predict Risk
 const predictRisk = async (req, res) => {
   // Added doctor_id to destructuring
-  const { name, inputs, doctor_id } = req.body; 
+  const { name, inputs, doctor_id } = req.body;
   const userId = req.user._id;
   const userRole = req.user.role;
 
@@ -14,7 +14,7 @@ const predictRisk = async (req, res) => {
     try {
       const response = await axios.post('http://127.0.0.1:5001/predict', inputs);
       aiResult = {
-        riskScore: response.data.risk_score,
+        riskScore: response.data.risk_score || (response.data.probability * 100),
         riskLevel: response.data.risk_level
       };
     } catch (pyError) {
@@ -82,12 +82,12 @@ const getPatients = async (req, res) => {
 };
 
 const simulateRisk = async (req, res) => {
-  const { inputs } = req.body; 
+  const { inputs } = req.body;
   try {
-    const response = await axios.post('http://127.0.0.1:5001/predict', inputs);
+    const response = await axios.post('http://127.0.0.1:5001/predict', inputs);// Assuming the Python service returns a JSON with 'risk_score' and 'risk_level'
     res.status(200).json(response.data);
   } catch (error) {
-    res.status(200).json({ riskScore: 0, riskLevel: "Error" });
+    res.status(200).json({ risk_score: 0, risk_level: "Error" });
   }
 };
 
