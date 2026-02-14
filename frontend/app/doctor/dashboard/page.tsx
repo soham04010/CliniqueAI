@@ -9,19 +9,54 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  LogOut, 
-  Loader2, 
-  PlusCircle, 
-  MessageSquare, 
-  RefreshCcw, 
-  Trash2 
+import {
+  LogOut,
+  Loader2,
+  PlusCircle,
+  MessageSquare,
+  RefreshCcw,
+  Trash2
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import api from "@/lib/api";
 import ClinicalCoPilot from "@/components/ClinicalCoPilot"; // From Friend's code
 
 export default function DoctorDashboard() {
   const router = useRouter();
+
+  // DELETE STATE
+  const [patientToDelete, setPatientToDelete] = useState<any | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+
+  // DELETE PATIENT HANDLER
+  const initiateDelete = (e: React.MouseEvent, patient: any) => {
+    e.stopPropagation();
+    setPatientToDelete(patient);
+    setDeleteConfirmation(""); // Reset input
+  };
+
+  const confirmDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!patientToDelete) return;
+
+    try {
+      await api.delete(`/patients/${encodeURIComponent(patientToDelete.name)}`);
+      setPatientToDelete(null);
+      await fetchPatients();
+    } catch (err) {
+      alert("Failed to delete patient records.");
+    }
+  };
   const [doctorName, setDoctorName] = useState("");
   const [loading, setLoading] = useState(true);
   const [patients, setPatients] = useState<any[]>([]);
@@ -42,7 +77,7 @@ export default function DoctorDashboard() {
   const fetchPatients = useCallback(async () => {
     try {
       const { data } = await api.get(`/patients?refresh=${Date.now()}`);
-      setPatients([...data]); 
+      setPatients([...data]);
     } catch (err) {
       console.error("Fetch failed:", err);
     } finally {
@@ -78,10 +113,10 @@ export default function DoctorDashboard() {
   const handlePredict = async (e: React.FormEvent) => {
     e.preventDefault();
     setAiLoading(true);
-    
+
     // .trim() prevents duplicate rows caused by accidental spaces (Your logic)
     const payload = {
-      name: aiForm.name.trim(), 
+      name: aiForm.name.trim(),
       inputs: {
         gender: aiForm.gender, age: Number(aiForm.age),
         hypertension: Number(aiForm.hypertension), heart_disease: Number(aiForm.heart_disease),
@@ -89,32 +124,21 @@ export default function DoctorDashboard() {
         HbA1c_level: Number(aiForm.HbA1c_level), blood_glucose_level: Number(aiForm.blood_glucose_level)
       }
     };
-    
+
     try {
       const { data } = await api.post('/patients/predict', payload);
       setAiResult(data.prediction);
-      
+
       // Update dashboard row immediately (Your logic)
-      await fetchPatients(); 
+      await fetchPatients();
     } catch (err: any) {
       alert("AI Prediction Failed. Check server connection.");
-    } finally { 
-      setAiLoading(false); 
+    } finally {
+      setAiLoading(false);
     }
   };
 
-  // DELETE PATIENT HANDLER (Your logic)
-  const handleDeletePatient = async (e: React.MouseEvent, patientName: string) => {
-    e.stopPropagation(); 
-    if (!confirm(`Are you sure you want to delete all records for ${patientName}? This cannot be undone.`)) return;
 
-    try {
-      await api.delete(`/patients/${encodeURIComponent(patientName)}`);
-      await fetchPatients(); 
-    } catch (err) {
-      alert("Failed to delete patient records.");
-    }
-  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -229,8 +253,8 @@ export default function DoctorDashboard() {
       {/* Active Patient Directory */}
       <Card className="bg-slate-900 border-slate-800 text-white shadow-2xl">
         <CardHeader className="border-b border-slate-800/50 flex justify-between items-center flex-row">
-           <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500">Active Patient Directory</CardTitle>
-           <p className="text-[10px] text-slate-600 font-bold uppercase">Sync Status: Real-time</p>
+          <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500">Active Patient Directory</CardTitle>
+          <p className="text-[10px] text-slate-600 font-bold uppercase">Sync Status: Real-time</p>
         </CardHeader>
         <CardContent className="p-0">
           <div className="flex flex-col">
@@ -238,9 +262,9 @@ export default function DoctorDashboard() {
               <div className="text-center py-20 text-slate-600 italic">No managed clinical records found in this view.</div>
             ) : (
               patients.map((p: any) => (
-                <div 
-                  key={p._id} 
-                  onClick={() => router.push(`/doctor/patients/${p._id}`)} 
+                <div
+                  key={p._id}
+                  onClick={() => router.push(`/doctor/patients/${p._id}`)}
                   className="flex justify-between items-center p-6 border-b border-slate-800 hover:bg-slate-800/20 transition cursor-pointer group"
                 >
                   <div className="flex items-center gap-4">
@@ -252,31 +276,31 @@ export default function DoctorDashboard() {
                       <p className="text-[10px] text-slate-500 font-mono">LATEST: HbA1c {p.inputs?.HbA1c_level}% | BMI {p.inputs?.bmi} | Glucose {p.inputs?.blood_glucose_level}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-6">
                     <div className="text-right">
                       <p className="text-[10px] text-slate-500 font-bold">RISK INDEX</p>
                       <p className="font-black text-xl font-mono">{(p.prediction?.riskScore || 0).toFixed(4)}%</p>
                     </div>
-                    
+
                     <div className="flex items-center gap-4">
-                        <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter border ${
-                        p.prediction?.riskLevel === 'High' 
-                            ? 'bg-red-500/10 border-red-500/30 text-red-500' 
-                            : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                      <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter border ${p.prediction?.riskLevel === 'High'
+                        ? 'bg-red-500/10 border-red-500/30 text-red-500'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                         }`}>
                         {p.prediction?.riskLevel} Risk
-                        </div>
+                      </div>
 
-                        {/* DELETE BUTTON (Your logic) */}
-                        <Button 
-                            onClick={(e) => handleDeletePatient(e, p.name)}
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                        >
-                            <Trash2 size={18} />
-                        </Button>
+                      {/* DELETE BUTTON (Your logic) */}
+                      {/* DELETE BUTTON (Triggers controlled dialog) */}
+                      <Button
+                        onClick={(e) => initiateDelete(e, p)}
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -285,6 +309,35 @@ export default function DoctorDashboard() {
           </div>
         </CardContent>
       </Card>
+      {/* Controlled Delete Alert Dialog */}
+      <AlertDialog open={!!patientToDelete} onOpenChange={(open) => !open && setPatientToDelete(null)}>
+        <AlertDialogContent className="bg-slate-900 border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-red-500">Delete {patientToDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              This action is <span className="text-red-400 font-bold">irreversible</span>.
+              <br />Please type <span className="font-mono text-white bg-slate-800 px-1 rounded">{patientToDelete?.name}</span> to confirm.
+            </AlertDialogDescription>
+            <Input
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder="Type patient name to confirm"
+              className="bg-slate-950 border-slate-700 text-white mt-4 focus:ring-red-500/50"
+            />
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white" onClick={() => setPatientToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteConfirmation !== patientToDelete?.name}
+              className="bg-red-600 text-white hover:bg-red-700 border-none font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Delete Record
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Clinical CoPilot (Friend's logic) */}
       <ClinicalCoPilot />
     </div>
