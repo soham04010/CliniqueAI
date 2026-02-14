@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import joblib
 import os
-import requests
+import requests 
 from dotenv import load_dotenv
 
 load_dotenv() # Load environment variables from .env file
