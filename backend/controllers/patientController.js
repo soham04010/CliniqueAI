@@ -12,7 +12,7 @@ const predictRisk = async (req, res) => {
     // 1. AI Prediction
     let aiResult = { riskScore: 0, riskLevel: "Unknown" };
     try {
-      const response = await axios.post('http://127.0.0.1:8000/predict', inputs);
+      const response = await axios.post('http://127.0.0.1:5001/predict', inputs);
       aiResult = {
         riskScore: response.data.risk_score,
         riskLevel: response.data.risk_level
