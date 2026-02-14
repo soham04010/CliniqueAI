@@ -31,11 +31,11 @@ import { generatePatientReport } from "@/lib/generatePDF";
 export default function PatientDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  
+
   const [patient, setPatient] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Simulator State
   const [simulatedScore, setSimulatedScore] = useState<number | null>(null);
   const [simFactors, setSimFactors] = useState({ bmi: 0, glucose: 0, hba1c: 0 });
@@ -55,7 +55,7 @@ export default function PatientDetailsPage() {
       // 1. Get current assessment details
       const { data: current } = await api.get(`/patients/${id}`);
       setPatient(current);
-      
+
       // Initialize Simulator
       setSimFactors({
         bmi: current.inputs.bmi,
@@ -63,17 +63,17 @@ export default function PatientDetailsPage() {
         hba1c: current.inputs.HbA1c_level
       });
       // Set precision score from DB
-      setSimulatedScore(current.prediction.riskScore);
+      setSimulatedScore(current.prediction?.riskScore || 0);
 
       // Generate Rule-Based Insights
       generateInsights(current.inputs);
 
       // 2. Get Longitudinal History
       const { data: hist } = await api.get(`/patients/history/${encodeURIComponent(current.name)}`);
-      
+
       const graphData = hist.map((h: any) => ({
         date: new Date(h.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        score: h.prediction.riskScore
+        score: h.prediction?.riskScore || 0
       }));
       setHistory(graphData);
 
@@ -90,26 +90,26 @@ export default function PatientDetailsPage() {
     const newInsights = [];
     if (inputs.bmi >= 30) newInsights.push("Obesity detected (BMI > 30). Major risk driver.");
     else if (inputs.bmi >= 25) newInsights.push("Patient is Overweight (BMI > 25).");
-    
+
     if (inputs.HbA1c_level >= 6.5) newInsights.push("HbA1c indicates Diabetes range (> 6.5%).");
     else if (inputs.HbA1c_level >= 5.7) newInsights.push("HbA1c indicates Pre-Diabetes (5.7-6.4%).");
-    
+
     if (inputs.blood_glucose_level > 200) newInsights.push("Random Glucose is critically high (> 200 mg/dL).");
-    
+
     if (inputs.smoking_history !== 'never' && inputs.smoking_history !== 'No Info') {
       newInsights.push(`Smoking history (${inputs.smoking_history}) contributes to cardiovascular risk.`);
     }
-    
+
     if (inputs.hypertension === 1) newInsights.push("Hypertension is a concurrent comorbidity.");
-    
+
     if (newInsights.length === 0) newInsights.push("All vitals are currently within normal ranges.");
-    
+
     setInsights(newInsights);
   };
 
   const runSimulation = async () => {
     if (!patient) return;
-    
+
     const payload = {
       inputs: {
         ...patient.inputs,
@@ -153,7 +153,7 @@ export default function PatientDetailsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Left & Middle Column: Clinical Data, Insights & Chart */}
         <div className="lg:col-span-2 space-y-6">
           
@@ -265,7 +265,7 @@ export default function PatientDetailsPage() {
                     <Label className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Target Glucose</Label>
                     <span className="text-blue-400 font-mono font-bold bg-blue-500/10 px-3 py-1 rounded-full text-xs border border-blue-500/20">{simFactors.glucose}</span>
                   </div>
-                  <input type="range" min="70" max="300" step="1" value={simFactors.glucose} onChange={(e) => setSimFactors({...simFactors, glucose: Number(e.target.value)})} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                  <input type="range" min="70" max="300" step="1" value={simFactors.glucose} onChange={(e) => setSimFactors({ ...simFactors, glucose: Number(e.target.value) })} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
                 </div>
 
                 <div className="space-y-4">
@@ -273,7 +273,7 @@ export default function PatientDetailsPage() {
                     <Label className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Target HbA1c</Label>
                     <span className="text-purple-400 font-mono font-bold bg-purple-500/10 px-3 py-1 rounded-full text-xs border border-purple-500/20">{simFactors.hba1c}</span>
                   </div>
-                  <input type="range" min="4" max="15" step="0.1" value={simFactors.hba1c} onChange={(e) => setSimFactors({...simFactors, hba1c: Number(e.target.value)})} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500" />
+                  <input type="range" min="4" max="15" step="0.1" value={simFactors.hba1c} onChange={(e) => setSimFactors({ ...simFactors, hba1c: Number(e.target.value) })} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500" />
                 </div>
 
                 <div className="space-y-4">
@@ -281,7 +281,7 @@ export default function PatientDetailsPage() {
                     <Label className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Target BMI</Label>
                     <span className="text-orange-400 font-mono font-bold bg-orange-500/10 px-3 py-1 rounded-full text-xs border border-orange-500/20">{simFactors.bmi}</span>
                   </div>
-                  <input type="range" min="15" max="50" step="0.5" value={simFactors.bmi} onChange={(e) => setSimFactors({...simFactors, bmi: Number(e.target.value)})} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+                  <input type="range" min="15" max="50" step="0.5" value={simFactors.bmi} onChange={(e) => setSimFactors({ ...simFactors, bmi: Number(e.target.value) })} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500" />
                 </div>
 
                 <Button 
