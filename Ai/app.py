@@ -100,7 +100,9 @@ def predict():
             'prediction': int(prediction[0]),
             'probability': float(probability),
             'risk_score': float(score),
-            'risk_level': "High" if probability > 0.7 else "Moderate" if probability > 0.3 else "Low"
+            'risk_level': "High" if probability > 0.7 else "Moderate" if probability > 0.3 else "Low",
+            'confidence_score': round(abs(float(probability) - 0.5) * 2, 2),
+            'confidence_label': "High" if abs(float(probability) - 0.5) * 2 >= 0.7 else "Moderate" if abs(float(probability) - 0.5) * 2 >= 0.4 else "Low"
         })
 
     except Exception as e:

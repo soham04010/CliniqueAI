@@ -16,7 +16,9 @@ const predictRisk = async (req, res) => {
       const response = await axios.post('http://127.0.0.1:5001/predict', inputs);
       aiResult = {
         riskScore: response.data.risk_score || (response.data.probability * 100),
-        riskLevel: response.data.risk_level
+        riskLevel: response.data.risk_level,
+        confidenceScore: response.data.confidence_score,
+        confidenceLabel: response.data.confidence_label
       };
     } catch (pyError) {
       console.error("⚠️ AI Service Error:", pyError.message);

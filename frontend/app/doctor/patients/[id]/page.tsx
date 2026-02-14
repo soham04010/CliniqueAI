@@ -12,7 +12,10 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
-  FileDown
+  FileDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus
 } from "lucide-react";
 import {
   LineChart,
@@ -21,12 +24,15 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ReferenceLine
 } from 'recharts';
 import api from "@/lib/api";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatBox from "@/components/ChatBox";
 import ClinicalCoPilot from "@/components/ClinicalCoPilot"; // From Friend's code
 import { generatePatientReport } from "@/lib/generatePDF"; // From Friend's code
+import { toast } from "sonner";
 
 export default function PatientDetailsPage() {
   const params = useParams();
@@ -89,13 +95,16 @@ export default function PatientDetailsPage() {
       const graphData = hist.map((h: any) => ({
         date: new Date(h.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         score: h.prediction?.riskScore || 0,
+        bmi: h.inputs?.bmi || 0,
+        glucose: h.inputs?.blood_glucose_level || 0,
+        hba1c: h.inputs?.HbA1c_level || 0,
         type: 'actual'
       }));
       setHistory(graphData);
 
     } catch (err) {
       console.error("Fetch Error:", err);
-      alert("Error loading patient data");
+      toast.error("Error loading patient", { description: "Could not fetch patient details." });
       router.push("/doctor/dashboard");
     } finally {
       setLoading(false);
@@ -105,6 +114,29 @@ export default function PatientDetailsPage() {
   useEffect(() => {
     if (id) fetchPatientData();
   }, [id, fetchPatientData]);
+
+  const getTrend = (metric: string) => {
+    const actuals = history.filter(h => h.type === 'actual');
+    if (actuals.length < 2) return { diff: 0, dir: 'flat', isGood: true };
+
+    const current = actuals[actuals.length - 1];
+    const previous = actuals[actuals.length - 2];
+
+    if (!current || !previous) return { diff: 0, dir: 'flat', isGood: true };
+
+    const valCurr = Number(current[metric] || 0);
+    const valPrev = Number(previous[metric] || 0);
+    const diff = valCurr - valPrev;
+
+    // Lower is better logic (Risk, A1C, BMI, Glucose all follow this usually)
+    const isGood = diff <= 0;
+
+    return {
+      diff: Math.abs(diff).toFixed(metric === 'score' ? 2 : 1),
+      dir: diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat',
+      isGood
+    };
+  };
 
   const runSimulation = async () => {
     if (!patient) return;
@@ -145,7 +177,7 @@ export default function PatientDetailsPage() {
       }));
 
     } catch (err) {
-      alert("Simulation Failed. Check AI Service.");
+      toast.error("Simulation Failed", { description: "Check AI Service connection." });
     }
   };
 
@@ -156,10 +188,26 @@ export default function PatientDetailsPage() {
         inputs: { ...patient.inputs },
       };
       await api.post('/patients/predict', payload);
-      alert("Projection saved as new patient record.");
+      toast.custom((t) => (
+        <div className="bg-slate-950 border border-emerald-500/20 p-4 rounded-xl shadow-2xl shadow-emerald-500/10 flex items-center gap-4 relative overflow-hidden w-full max-w-md animate-in slide-in-from-top-2 duration-300">
+          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+          <div className="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center shrink-0 border border-emerald-500/20">
+            <CheckCircle className="h-5 w-5 text-emerald-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-white tracking-wide flex items-center gap-2">
+              PROJECTION COMMITTED
+            </h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-1 leading-relaxed">
+              New clinical trajectory successfully computed and integrated into patient history.
+            </p>
+          </div>
+          <div className="absolute -right-6 -top-6 h-20 w-20 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        </div>
+      ), { duration: 5000 });
       router.push('/doctor/dashboard');
     } catch (e) {
-      alert("Failed to save.");
+      toast.error("Save Failed", { description: "Could not save the projection." });
     }
   };
 
@@ -228,30 +276,75 @@ export default function PatientDetailsPage() {
               </CardContent>
             </Card>
 
-            {/* Enhanced Graph (Your logic) */}
-            <Card className="bg-slate-900 border-slate-800 text-white shadow-xl h-[280px]">
-              <CardHeader className="pb-1"><CardTitle className="text-[10px] text-slate-500 uppercase font-black">History Trend</CardTitle></CardHeader>
-              <CardContent className="h-[200px] p-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={history}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                    <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#475569" domain={[0, 100]} fontSize={10} tickLine={false} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }} />
-                    <Line
-                      type="monotone"
-                      dataKey="score"
-                      stroke="#2dd4bf"
-                      strokeWidth={3}
-                      dot={(props: any) => {
-                        const { cx, cy, payload } = props;
-                        if (payload.type === 'simulated') return <circle key={props.key} cx={cx} cy={cy} r={6} fill="#f59e0b" stroke="none" />;
-                        return <circle key={props.key} cx={cx} cy={cy} r={4} fill="#2dd4bf" stroke="none" />;
-                      }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
+            {/* Enhanced Graph (Tabs) */}
+            <Card className="bg-slate-900 border-slate-800 text-white shadow-xl h-[380px]">
+              <Tabs defaultValue="risk" className="h-full flex flex-col">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0 border-b border-slate-800/50">
+                  <CardTitle className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Clinical Trends</CardTitle>
+                  <TabsList className="bg-slate-950 border border-slate-800 h-8">
+                    <TabsTrigger value="risk" className="text-[10px] px-3 font-bold">Risk</TabsTrigger>
+                    <TabsTrigger value="hba1c" className="text-[10px] px-3 font-bold">HbA1c</TabsTrigger>
+                    <TabsTrigger value="bmi" className="text-[10px] px-3 font-bold">BMI</TabsTrigger>
+                    <TabsTrigger value="glucose" className="text-[10px] px-3 font-bold">Glucose</TabsTrigger>
+                  </TabsList>
+                </CardHeader>
+                <CardContent className="flex-1 min-h-0 p-4">
+                  {['risk', 'hba1c', 'bmi', 'glucose'].map(metric => {
+                    const dataKey = metric === 'risk' ? 'score' : metric;
+                    const trend = getTrend(dataKey);
+                    const color = metric === 'risk' ? '#2dd4bf' : metric === 'hba1c' ? '#a855f7' : metric === 'bmi' ? '#f97316' : '#3b82f6';
+
+                    return (
+                      <TabsContent key={metric} value={metric} className="h-full flex flex-col mt-0 data-[state=active]:flex">
+                        {/* Delta Block */}
+                        <div className="flex items-center gap-3 mb-4 bg-slate-950 p-3 rounded-xl border border-slate-800/50">
+                          <div className={`flex items-center justify-center h-8 w-8 rounded-full ${trend.isGood ? 'bg-emerald-500/10 text-emerald-400' : (trend.dir === 'flat' ? 'bg-slate-800 text-slate-400' : 'bg-red-500/10 text-red-400')}`}>
+                            {trend.dir === 'up' ? <ArrowUpRight size={16} /> : trend.dir === 'down' ? <ArrowDownRight size={16} /> : <Minus size={16} />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-300">
+                              {trend.dir === 'flat' ? 'Stable' : (trend.isGood ? 'Improving' : 'Worsening')}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {Math.abs(Number(trend.diff))} unit change since last assessment
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Chart */}
+                        <div className="flex-1 min-h-0">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={history}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                              <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} />
+                              <YAxis stroke="#475569" domain={['auto', 'auto']} fontSize={10} tickLine={false} />
+                              <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }} />
+
+                              {metric === 'hba1c' && <ReferenceLine y={6.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'right', value: 'Threshold (6.5)', fill: '#ef4444', fontSize: 10 }} />}
+                              {metric === 'bmi' && <ReferenceLine y={25} stroke="#f59e0b" strokeDasharray="3 3" />}
+                              {metric === 'bmi' && <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'right', value: 'Obesity', fill: '#ef4444', fontSize: 10 }} />}
+                              {metric === 'glucose' && <ReferenceLine y={126} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'right', value: '126 mg/dL', fill: '#ef4444', fontSize: 10 }} />}
+
+                              <Line
+                                type="monotone"
+                                dataKey={dataKey}
+                                stroke={color}
+                                strokeWidth={3}
+                                dot={(props: any) => {
+                                  const { cx, cy, payload } = props;
+                                  if (payload.type === 'simulated') return <circle key={props.key} cx={cx} cy={cy} r={6} fill="#f59e0b" stroke="none" />;
+                                  return <circle key={props.key} cx={cx} cy={cy} r={4} fill={color} stroke="none" />;
+                                }}
+                                activeDot={{ r: 6 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </TabsContent>
+                    );
+                  })}
+                </CardContent>
+              </Tabs>
             </Card>
           </div>
 
@@ -291,6 +384,14 @@ export default function PatientDetailsPage() {
                 <div className={`text-6xl font-black tracking-tighter drop-shadow-[0_0_15px_rgba(45,212,191,0.3)] ${isSimulated ? 'text-yellow-400' : 'text-white'}`}>
                   {simulatedScore?.toFixed(4)}%
                 </div>
+                {!isSimulated && patient.prediction?.confidenceLabel && (
+                  <div className={`mt-2 inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${patient.prediction.confidenceLabel === 'High' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                    patient.prediction.confidenceLabel === 'Moderate' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
+                      'bg-red-500/10 border-red-500/20 text-red-500'
+                    }`}>
+                    Confidence: {patient.prediction.confidenceLabel}
+                  </div>
+                )}
                 <div className="mt-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
                   Reduction Potential: -{((history.find(h => h.type !== 'simulated')?.score || 0) - (simulatedScore || 0)).toFixed(2)}%
                 </div>
