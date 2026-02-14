@@ -1,21 +1,37 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
-import joblib 
+import pickle
 import numpy as np
-import warnings
+import joblib
 
-warnings.filterwarnings("ignore")
 app = Flask(__name__)
-CORS(app)
 
-print("⏳ Loading AI Model...")
+# Load Model & Scaler
 try:
     with open('diabetes_model.pkl', 'rb') as f:
         model = joblib.load(f)
     print("✅ AI Model Loaded (Expects 12 Features)")
 except Exception as e:
-    print(f"❌ Model Load Failed: {e}")
+    print(f"❌ Error loading model/scaler: {e}")
     model = None
+    scaler = None
+
+try:
+    with open('scaler.pkl', 'rb') as f:
+        scaler = joblib.load(f)
+    print("✅ Scaler Loaded")
+except Exception as e:
+    print(f"❌ Scaler Load Failed: {e}")
+    scaler = None
+
+# Load Scaler
+print("⏳ Loading Scaler...")
+try:
+    with open('scaler.pkl', 'rb') as f:
+        scaler = joblib.load(f)
+    print("✅ Scaler Loaded")
+except Exception as e:
+    print(f"❌ Scaler Load Failed: {e}")
+    scaler = None
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -43,16 +59,17 @@ def predict():
     smoke_not_current = 1 if smoking == 'not current' else 0
 
     # FINAL FEATURE ARRAY (12 Columns)
-    # Order: age, hypertension, heart_disease, bmi, HbA1c, glucose, 
-    #        gender_Male, smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
+    # Corrected Order based on Scaler Analysis:
+    # gender, age, hypertension, heart_disease, bmi, HbA1c, glucose, 
+    # smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
     features = [
+        gender_male,
         age, 
         hypertension, 
         heart_disease, 
         bmi, 
         hba1c, 
         glucose, 
-        gender_male,
         smoke_current, 
         smoke_ever, 
         smoke_former, 
@@ -61,23 +78,28 @@ def predict():
     ]
 
     try:
-        if model:
+        if model and scaler:
             features_arr = np.array([features])
-            prediction = model.predict(features_arr)
-            probability = model.predict_proba(features_arr)[0][1]
+            
+            # SCALING INPUT
+            features_scaled = scaler.transform(features_arr)
+            
+            prediction = model.predict(features_scaled)
+            probability = model.predict_proba(features_scaled)[0][1]
             score = float(probability) * 100 # Exact score, no rounding
         else:
             # Fallback Logic
             score = 15.0 + (bmi/2) if glucose < 140 else 85.0
 
         return jsonify({
-            'risk_score': score, 
-            'risk_level': 'High' if score > 50 else 'Low'
+            'prediction': int(prediction[0]),
+            'probability': float(probability),
+            'risk_score': float(score),
+            'risk_level': "High" if probability > 0.7 else "Moderate" if probability > 0.3 else "Low"
         })
 
     except Exception as e:
-        print(f"Prediction Error: {e}")
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(port=8000, debug=True)
+    app.run(port=5001, debug=True)
