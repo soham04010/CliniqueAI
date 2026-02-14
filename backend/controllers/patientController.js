@@ -1,10 +1,10 @@
 const axios = require('axios');
 const PatientData = require('../models/PatientData');
-const CoPilotChat = require('../models/CoPilotChat'); // Import CoPilot Chat Model
+const CoPilotChat = require('../models/CoPilotChat'); // From Friend's code
+const mongoose = require('mongoose'); // From Your code (for Aggregation)
 
 // @desc    Predict Risk
 const predictRisk = async (req, res) => {
-  // Added doctor_id to destructuring
   const { name, inputs, doctor_id } = req.body;
   const userId = req.user._id;
   const userRole = req.user.role;
@@ -36,7 +36,6 @@ const predictRisk = async (req, res) => {
       recordData.doctor_id = userId;
     } else {
       recordData.patient_id = userId;
-      // Link the record to the selected doctor if provided by the patient
       if (doctor_id) recordData.doctor_id = doctor_id;
     }
 
@@ -48,8 +47,39 @@ const predictRisk = async (req, res) => {
   }
 };
 
-// ... Rest of the functions (getPatientById, getPatientHistory, getPatients, simulateRisk) 
-// remain EXACTLY as per your provided code.
+// @desc    Get All Patients (Using YOUR Unique List logic)
+const getPatients = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    // Ensure the ID is a proper MongoDB ObjectId for aggregation
+    const searchId = new mongoose.Types.ObjectId(userId);
+
+    const patients = await PatientData.aggregate([
+      {
+        $match: userRole === 'doctor' 
+          ? { doctor_id: searchId } 
+          : { patient_id: searchId }
+      },
+      { $sort: { createdAt: -1 } }, 
+      {
+        $group: {
+          _id: "$name", // Collapse all records with the same name
+          latestRecord: { $first: "$$ROOT" } 
+        }
+      },
+      { $replaceRoot: { newRoot: "$latestRecord" } }, 
+      { $sort: { createdAt: -1 } } 
+    ]);
+
+    res.json(patients);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get Single Assessment by ID
 const getPatientById = async (req, res) => {
   try {
     const patient = await PatientData.findById(req.params.id);
@@ -60,6 +90,7 @@ const getPatientById = async (req, res) => {
   }
 };
 
+// @desc    Get Full History by Patient Name (For Charting)
 const getPatientHistory = async (req, res) => {
   const { name } = req.params;
   try {
@@ -72,16 +103,7 @@ const getPatientHistory = async (req, res) => {
   }
 };
 
-const getPatients = async (req, res) => {
-  try {
-    const query = req.user.role === 'doctor' ? { doctor_id: req.user._id } : { patient_id: req.user._id };
-    const patients = await PatientData.find(query).sort({ createdAt: -1 });
-    res.json(patients);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
+// @desc    Simulate Risk
 const simulateRisk = async (req, res) => {
   const { inputs } = req.body;
   try {
@@ -92,17 +114,18 @@ const simulateRisk = async (req, res) => {
   }
 };
 
+// @desc    CoPilot AI Chat Logic (From Friend's code)
 const copilotRequest = async (req, res) => {
   const { message, context } = req.body;
   const userId = req.user._id;
-  const patientId = context._id || context.id; // Try to extract patient ID if available
+  const patientId = context._id || context.id; 
 
   try {
     // 1. Fetch Patient History if Name is available
     if (context.name) {
       const history = await PatientData.find({ name: context.name })
         .sort({ createdAt: 1 })
-        .limit(10) // Get last 10 records for trend analysis
+        .limit(10) 
         .select('prediction.riskScore createdAt inputs');
 
       context.history = history;
@@ -112,18 +135,15 @@ const copilotRequest = async (req, res) => {
     const response = await axios.post('http://127.0.0.1:5001/copilot', { message, context });
     const aiReply = response.data.reply;
 
-    // 2. Save Chat History if Patient Context Exists
+    // 3. Save Chat History if Patient Context Exists
     if (patientId) {
-      // Find existing chat or create new
       let chat = await CoPilotChat.findOne({ userId, patientId });
 
       if (!chat) {
         chat = new CoPilotChat({ userId, patientId, messages: [] });
       }
 
-      // Add User Message
       chat.messages.push({ role: 'user', content: message });
-      // Add AI Response
       chat.messages.push({ role: 'assistant', content: aiReply });
 
       await chat.save();
@@ -136,6 +156,7 @@ const copilotRequest = async (req, res) => {
   }
 };
 
+// @desc    Get Chat History (From Friend's code)
 const getCoPilotHistory = async (req, res) => {
   const { patientId } = req.params;
   const userId = req.user._id;
@@ -149,4 +170,27 @@ const getCoPilotHistory = async (req, res) => {
   }
 };
 
-module.exports = { predictRisk, getPatients, getPatientById, getPatientHistory, simulateRisk, copilotRequest, getCoPilotHistory };
+// @desc    Delete Patient Records (From Your code)
+const deletePatient = async (req, res) => {
+  try {
+    const { name } = req.params;
+    await PatientData.deleteMany({ 
+        name: decodeURIComponent(name), 
+        doctor_id: req.user._id 
+    });
+    res.json({ message: "Patient history deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { 
+  predictRisk, 
+  getPatients, 
+  getPatientById, 
+  getPatientHistory, 
+  simulateRisk, 
+  copilotRequest, 
+  getCoPilotHistory,
+  deletePatient 
+};
