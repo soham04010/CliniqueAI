@@ -5,23 +5,23 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { 
-  ArrowLeft, 
-  TrendingDown, 
-  RefreshCw, 
-  Loader2, 
-  AlertCircle, 
-  CheckCircle, 
-  FileDown 
+import {
+  ArrowLeft,
+  TrendingDown,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  FileDown
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
 import api from "@/lib/api";
 import ChatBox from "@/components/ChatBox";
@@ -31,16 +31,16 @@ import { generatePatientReport } from "@/lib/generatePDF"; // From Friend's code
 export default function PatientDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const id = params?.id; 
-  
+  const id = params?.id;
+
   const [patient, setPatient] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Simulator State (Your logic)
   const [simulatedScore, setSimulatedScore] = useState<number | null>(null);
   const [simFactors, setSimFactors] = useState({ bmi: 0, glucose: 0, hba1c: 0 });
-  const [isSimulated, setIsSimulated] = useState(false); 
+  const [isSimulated, setIsSimulated] = useState(false);
 
   const [insights, setInsights] = useState<string[]>([]);
   const [doctor, setDoctor] = useState<any>({});
@@ -66,12 +66,12 @@ export default function PatientDetailsPage() {
 
   const fetchPatientData = useCallback(async () => {
     if (!id) return;
-    
+
     try {
       setLoading(true);
       const { data: current } = await api.get(`/patients/${id}?t=${Date.now()}`);
       setPatient(current);
-      
+
       if (current.inputs) {
         setSimFactors({
           bmi: current.inputs.bmi || 0,
@@ -85,11 +85,11 @@ export default function PatientDetailsPage() {
 
       // Fetch History
       const { data: hist } = await api.get(`/patients/history/${encodeURIComponent(current.name)}?t=${Date.now()}`);
-      
+
       const graphData = hist.map((h: any) => ({
         date: new Date(h.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         score: h.prediction?.riskScore || 0,
-        type: 'actual' 
+        type: 'actual'
       }));
       setHistory(graphData);
 
@@ -108,7 +108,7 @@ export default function PatientDetailsPage() {
 
   const runSimulation = async () => {
     if (!patient) return;
-    
+
     const payload = {
       inputs: {
         ...patient.inputs,
@@ -132,7 +132,7 @@ export default function PatientDetailsPage() {
           {
             date: 'Projected',
             score: newScore,
-            type: 'simulated' 
+            type: 'simulated'
           }
         ];
       });
@@ -151,15 +151,15 @@ export default function PatientDetailsPage() {
 
   const saveProjection = async () => {
     try {
-        const payload = {
-            name: patient.name,
-            inputs: { ...patient.inputs },
-        };
-        await api.post('/patients/predict', payload);
-        alert("Projection saved as new patient record.");
-        router.push('/doctor/dashboard');
-    } catch(e) {
-        alert("Failed to save.");
+      const payload = {
+        name: patient.name,
+        inputs: { ...patient.inputs },
+      };
+      await api.post('/patients/predict', payload);
+      alert("Projection saved as new patient record.");
+      router.push('/doctor/dashboard');
+    } catch (e) {
+      alert("Failed to save.");
     }
   };
 
@@ -174,8 +174,8 @@ export default function PatientDetailsPage() {
           <Button variant="ghost" onClick={() => router.back()} className="text-slate-400 hover:text-white">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-          <Button 
-            onClick={() => generatePatientReport(patient)} 
+          <Button
+            onClick={() => generatePatientReport(patient)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 shadow-lg shadow-emerald-500/10"
           >
             <FileDown size={18} /> Download {isSimulated ? "Projected" : "Current"} Report
@@ -189,7 +189,7 @@ export default function PatientDetailsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-4">
             <Card className={`bg-slate-900 border-slate-800 text-white transition-colors shadow-md ${isSimulated ? 'border-blue-500/50 bg-blue-900/10' : ''}`}>
@@ -230,39 +230,39 @@ export default function PatientDetailsPage() {
 
             {/* Enhanced Graph (Your logic) */}
             <Card className="bg-slate-900 border-slate-800 text-white shadow-xl h-[280px]">
-               <CardHeader className="pb-1"><CardTitle className="text-[10px] text-slate-500 uppercase font-black">History Trend</CardTitle></CardHeader>
-               <CardContent className="h-[200px] p-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={history}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} />
-                      <YAxis stroke="#475569" domain={[0, 100]} fontSize={10} tickLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }} />
-                      <Line 
-                        type="monotone" 
-                        dataKey="score" 
-                        stroke="#2dd4bf" 
-                        strokeWidth={3} 
-                        dot={(props: any) => {
-                            const { cx, cy, payload } = props;
-                            if (payload.type === 'simulated') return <circle cx={cx} cy={cy} r={6} fill="#f59e0b" stroke="none" />;
-                            return <circle cx={cx} cy={cy} r={4} fill="#2dd4bf" stroke="none" />;
-                        }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-               </CardContent>
+              <CardHeader className="pb-1"><CardTitle className="text-[10px] text-slate-500 uppercase font-black">History Trend</CardTitle></CardHeader>
+              <CardContent className="h-[200px] p-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={history}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} />
+                    <YAxis stroke="#475569" domain={[0, 100]} fontSize={10} tickLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }} />
+                    <Line
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#2dd4bf"
+                      strokeWidth={3}
+                      dot={(props: any) => {
+                        const { cx, cy, payload } = props;
+                        if (payload.type === 'simulated') return <circle key={props.key} cx={cx} cy={cy} r={6} fill="#f59e0b" stroke="none" />;
+                        return <circle key={props.key} cx={cx} cy={cy} r={4} fill="#2dd4bf" stroke="none" />;
+                      }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
             </Card>
           </div>
 
           {/* Secure Chat Section */}
           {patient.patient_id ? (
             <div className="animate-in slide-in-from-bottom-4 duration-700">
-              <ChatBox 
-                senderId={doctor.id || doctor._id} 
-                senderName={doctor.name} 
-                receiverId={patient.patient_id} 
-                receiverName={patient.name} 
+              <ChatBox
+                senderId={doctor.id || doctor._id}
+                senderName={doctor.name}
+                receiverId={patient.patient_id}
+                receiverName={patient.name}
               />
             </div>
           ) : (
@@ -280,12 +280,12 @@ export default function PatientDetailsPage() {
             <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${isSimulated ? 'from-orange-500 via-yellow-500 to-orange-500' : 'from-blue-600 via-teal-400 to-blue-600'}`}></div>
             <CardHeader className="pt-8">
               <CardTitle className="flex items-center gap-2 font-black italic tracking-tighter">
-                <TrendingDown className="h-6 w-6 text-blue-500" /> 
+                <TrendingDown className="h-6 w-6 text-blue-500" />
                 RISK SIMULATOR
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-8">
-              
+
               <div className="text-center p-8 bg-slate-950 rounded-3xl border border-slate-800/50 shadow-inner">
                 <p className="text-[10px] text-slate-500 uppercase font-bold mb-2 tracking-widest">Target Risk Projection</p>
                 <div className={`text-6xl font-black tracking-tighter drop-shadow-[0_0_15px_rgba(45,212,191,0.3)] ${isSimulated ? 'text-yellow-400' : 'text-white'}`}>
@@ -311,14 +311,14 @@ export default function PatientDetailsPage() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    <Button onClick={runSimulation} className="w-full bg-blue-600 hover:bg-blue-500 h-14 text-sm font-black tracking-widest shadow-xl shadow-blue-500/20 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all">
-                      <RefreshCw className="mr-2 h-4 w-4" /> COMPUTE PROJECTION
+                  <Button onClick={runSimulation} className="w-full bg-blue-600 hover:bg-blue-500 h-14 text-sm font-black tracking-widest shadow-xl shadow-blue-500/20 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all">
+                    <RefreshCw className="mr-2 h-4 w-4" /> COMPUTE PROJECTION
+                  </Button>
+                  {isSimulated && (
+                    <Button onClick={saveProjection} className="w-full bg-emerald-600 hover:bg-emerald-500 h-10 text-xs font-bold tracking-widest shadow-lg shadow-emerald-500/20">
+                      <CheckCircle className="mr-2 h-4 w-4" /> COMMIT CHANGE TO DASHBOARD
                     </Button>
-                    {isSimulated && (
-                        <Button onClick={saveProjection} className="w-full bg-emerald-600 hover:bg-emerald-500 h-10 text-xs font-bold tracking-widest shadow-lg shadow-emerald-500/20">
-                          <CheckCircle className="mr-2 h-4 w-4" /> COMMIT CHANGE TO DASHBOARD
-                        </Button>
-                    )}
+                  )}
                 </div>
               </div>
             </CardContent>

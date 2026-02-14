@@ -8,19 +8,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  HeartPulse, 
-  LogOut, 
-  Activity, 
-  CheckCircle, 
-  AlertTriangle, 
-  User, 
-  Loader2, 
-  RefreshCcw, 
-  FileDown 
+import {
+  HeartPulse,
+  LogOut,
+  Activity,
+  CheckCircle,
+  AlertTriangle,
+  User,
+  Loader2,
+  RefreshCcw,
+  FileDown
 } from "lucide-react";
 import api from "@/lib/api";
 import ChatBox from "@/components/ChatBox";
+import ClinicalCoPilot from "@/components/ClinicalCoPilot";
 import { generatePatientReport } from "@/lib/generatePDF";
 
 export default function PatientDashboard() {
@@ -31,32 +32,32 @@ export default function PatientDashboard() {
   const [loading, setLoading] = useState(true);
   const [isCheckOpen, setIsCheckOpen] = useState(false);
   const [checking, setChecking] = useState(false);
-  
+
   // Get user info from localStorage safely
   const [user, setUser] = useState<any>({});
 
   const [form, setForm] = useState({
-    gender: "Female", 
-    age: "", 
-    hypertension: "0", 
+    gender: "Female",
+    age: "",
+    hypertension: "0",
     heart_disease: "0",
-    smoking_history: "never", 
-    bmi: "", 
-    HbA1c_level: "", 
+    smoking_history: "never",
+    bmi: "",
+    HbA1c_level: "",
     blood_glucose_level: "",
-    doctor_id: "" 
+    doctor_id: ""
   });
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (!userStr) { router.push("/login"); return; }
-    
+
     try {
       const parsedUser = JSON.parse(userStr);
       if (parsedUser.role !== "patient") { router.push("/login"); return; }
       setUser(parsedUser);
       setUserName(parsedUser.name);
-      
+
       const loadData = async () => {
         await fetchMyRecords();
         await fetchDoctors();
@@ -97,15 +98,15 @@ export default function PatientDashboard() {
     try {
       const { data } = await api.get('/patients');
       setRecords(data);
-    } catch (e) { 
-      console.log("Error fetching records"); 
+    } catch (e) {
+      console.log("Error fetching records");
     }
   };
 
   const handleSelfCheck = async (e: React.FormEvent) => {
     e.preventDefault();
     setChecking(true);
-    
+
     const payload = {
       name: userName,
       doctor_id: form.doctor_id,
@@ -125,10 +126,10 @@ export default function PatientDashboard() {
       await api.post('/patients/predict', payload);
       await fetchMyRecords();
       setIsCheckOpen(false);
-    } catch (err) { 
-      alert("Check failed. Ensure the AI and Backend servers are active."); 
-    } finally { 
-      setChecking(false); 
+    } catch (err) {
+      alert("Check failed. Ensure the AI and Backend servers are active.");
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -162,10 +163,10 @@ export default function PatientDashboard() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xs uppercase tracking-widest text-slate-500 font-black">Latest Medical Assessment</CardTitle>
               {latestRecord && (
-                <Button 
+                <Button
                   onClick={() => generatePatientReport(latestRecord)}
-                  size="sm" 
-                  variant="outline" 
+                  size="sm"
+                  variant="outline"
                   className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 h-8 text-[10px] font-black uppercase"
                 >
                   <FileDown className="mr-1 h-3 w-3" /> Get Report PDF
@@ -182,7 +183,7 @@ export default function PatientDashboard() {
                   <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">
                     {latestRecord.prediction.riskLevel} Clinical Risk
                   </p>
-                  
+
                   <div className="grid grid-cols-3 gap-6 w-full max-w-lg mx-auto">
                     <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
                       <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Glucose</p>
@@ -200,8 +201,8 @@ export default function PatientDashboard() {
                 </div>
               ) : (
                 <div className="py-20 text-slate-500 italic text-center">
-                   <Activity className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                   <p>No health records established yet. Proceed to AI analysis.</p>
+                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p>No health records established yet. Proceed to AI analysis.</p>
                 </div>
               )}
             </CardContent>
@@ -210,11 +211,11 @@ export default function PatientDashboard() {
           {/* CHAT INTEGRATION */}
           {latestRecord?.doctor_id ? (
             <div className="animate-in slide-in-from-bottom-4 duration-700">
-              <ChatBox 
-                senderId={user.id || user._id} 
-                senderName={user.name} 
-                receiverId={latestRecord.doctor_id} 
-                receiverName="Assigned Physician" 
+              <ChatBox
+                senderId={user.id || user._id}
+                senderName={user.name}
+                receiverId={latestRecord.doctor_id}
+                receiverName="Assigned Physician"
               />
             </div>
           ) : (
@@ -242,10 +243,10 @@ export default function PatientDashboard() {
                     <DialogTitle className="text-xl font-black italic">{hasHistory ? "Routine Vital Check" : "AI Health Onboarding"}</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleSelfCheck} className="grid grid-cols-2 gap-4 py-4">
-                    
+
                     <div className="col-span-2 space-y-2">
                       <Label className="text-[10px] text-blue-400 font-black uppercase tracking-widest">Consulting Physician</Label>
-                      <Select onValueChange={(v) => setForm({...form, doctor_id: v})} defaultValue={form.doctor_id}>
+                      <Select onValueChange={(v) => setForm({ ...form, doctor_id: v })} defaultValue={form.doctor_id}>
                         <SelectTrigger className="bg-slate-800 border-slate-700 h-12">
                           <SelectValue placeholder="Select Doctor to share results" />
                         </SelectTrigger>
@@ -259,14 +260,14 @@ export default function PatientDashboard() {
 
                     <div className="space-y-1">
                       <Label className="text-[10px] text-slate-400 font-bold uppercase">Age</Label>
-                      <Input type="number" value={form.age} onChange={e => setForm({...form, age: e.target.value})} className="bg-slate-800 border-slate-700" required />
+                      <Input type="number" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} className="bg-slate-800 border-slate-700" required />
                     </div>
 
                     {!hasHistory && (
                       <>
                         <div className="space-y-1">
                           <Label className="text-[10px] text-slate-400 font-bold uppercase">Gender</Label>
-                          <Select onValueChange={(v) => setForm({...form, gender: v})} defaultValue={form.gender}>
+                          <Select onValueChange={(v) => setForm({ ...form, gender: v })} defaultValue={form.gender}>
                             <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
                             <SelectContent className="bg-slate-800 text-white">
                               <SelectItem value="Female">Female</SelectItem>
@@ -276,7 +277,7 @@ export default function PatientDashboard() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px] text-slate-400 font-bold uppercase">Smoking</Label>
-                          <Select onValueChange={v => setForm({...form, smoking_history: v})} defaultValue={form.smoking_history}>
+                          <Select onValueChange={v => setForm({ ...form, smoking_history: v })} defaultValue={form.smoking_history}>
                             <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
                             <SelectContent className="bg-slate-800 text-white">
                               <SelectItem value="never">Never</SelectItem>
@@ -288,14 +289,14 @@ export default function PatientDashboard() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px] text-slate-400 font-bold uppercase">Hypertension</Label>
-                          <Select onValueChange={v => setForm({...form, hypertension: v})} defaultValue={form.hypertension}>
+                          <Select onValueChange={v => setForm({ ...form, hypertension: v })} defaultValue={form.hypertension}>
                             <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
                             <SelectContent className="bg-slate-800 text-white"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px] text-slate-400 font-bold uppercase">Heart Disease</Label>
-                          <Select onValueChange={v => setForm({...form, heart_disease: v})} defaultValue={form.heart_disease}>
+                          <Select onValueChange={v => setForm({ ...form, heart_disease: v })} defaultValue={form.heart_disease}>
                             <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
                             <SelectContent className="bg-slate-800 text-white"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
                           </Select>
@@ -305,15 +306,15 @@ export default function PatientDashboard() {
 
                     <div className="space-y-1">
                       <Label className="text-[10px] text-teal-400 font-black uppercase">Glucose (mg/dL)</Label>
-                      <Input type="number" onChange={e => setForm({...form, blood_glucose_level: e.target.value})} className="bg-slate-800 border-teal-900/50" required />
+                      <Input type="number" onChange={e => setForm({ ...form, blood_glucose_level: e.target.value })} className="bg-slate-800 border-teal-900/50" required />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[10px] text-teal-400 font-black uppercase">HbA1c (%)</Label>
-                      <Input type="number" step="0.1" onChange={e => setForm({...form, HbA1c_level: e.target.value})} className="bg-slate-800 border-teal-900/50" required />
+                      <Input type="number" step="0.1" onChange={e => setForm({ ...form, HbA1c_level: e.target.value })} className="bg-slate-800 border-teal-900/50" required />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[10px] text-teal-400 font-black uppercase">BMI Index</Label>
-                      <Input type="number" step="0.1" onChange={e => setForm({...form, bmi: e.target.value})} className="bg-slate-800 border-teal-900/50" required />
+                      <Input type="number" step="0.1" onChange={e => setForm({ ...form, bmi: e.target.value })} className="bg-slate-800 border-teal-900/50" required />
                     </div>
 
                     <div className="col-span-2 mt-4">
@@ -329,30 +330,43 @@ export default function PatientDashboard() {
 
           {/* ANALYSIS HISTORY LIST */}
           <Card className="bg-slate-900 border-slate-800 text-white flex-1 overflow-hidden shadow-xl border-t-4 border-t-emerald-600">
-             <CardHeader className="p-4 border-b border-slate-800 flex flex-row justify-between items-center">
-               <CardTitle className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Longitudinal History</CardTitle>
-               <RefreshCcw className="h-3 w-3 text-slate-500 cursor-pointer hover:rotate-180 transition-transform duration-500" onClick={fetchMyRecords} />
-             </CardHeader>
-             <CardContent className="p-0 max-h-[350px] overflow-y-auto">
-                {records.map((r, i) => (
-                  <div key={i} className="flex justify-between items-center p-4 border-b border-slate-800 hover:bg-slate-800/20 transition-all group">
-                    <div>
-                       <p className="text-[10px] text-slate-500 font-mono group-hover:text-teal-500">{new Date(r.createdAt).toLocaleDateString()}</p>
-                       <p className="text-xs font-black text-slate-400 uppercase tracking-tighter italic">Trial #{records.length - i}</p>
-                    </div>
-                    <div className="text-right">
-                       <p className={`text-sm font-black ${r.prediction.riskLevel === 'High' ? 'text-red-400' : 'text-emerald-400'}`}>
-                         {r.prediction.riskScore.toFixed(2)}%
-                       </p>
-                       <p className="text-[8px] uppercase font-black text-slate-600 tracking-widest">{r.prediction.riskLevel} Risk</p>
-                    </div>
+            <CardHeader className="p-4 border-b border-slate-800 flex flex-row justify-between items-center">
+              <CardTitle className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Longitudinal History</CardTitle>
+              <RefreshCcw className="h-3 w-3 text-slate-500 cursor-pointer hover:rotate-180 transition-transform duration-500" onClick={fetchMyRecords} />
+            </CardHeader>
+            <CardContent className="p-0 max-h-[350px] overflow-y-auto">
+              {records.map((r, i) => (
+                <div key={i} className="flex justify-between items-center p-4 border-b border-slate-800 hover:bg-slate-800/20 transition-all group">
+                  <div>
+                    <p className="text-[10px] text-slate-500 font-mono group-hover:text-teal-500">{new Date(r.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-tighter italic">Trial #{records.length - i}</p>
                   </div>
-                ))}
-                {records.length === 0 && <p className="p-10 text-center text-[10px] text-slate-600 uppercase font-bold">Waiting for primary data...</p>}
-             </CardContent>
+                  <div className="text-right">
+                    <p className={`text-sm font-black ${r.prediction.riskLevel === 'High' ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {r.prediction.riskScore.toFixed(2)}%
+                    </p>
+                    <p className="text-[8px] uppercase font-black text-slate-600 tracking-widest">{r.prediction.riskLevel} Risk</p>
+                  </div>
+                </div>
+              ))}
+              {records.length === 0 && <p className="p-10 text-center text-[10px] text-slate-600 uppercase font-bold">Waiting for primary data...</p>}
+            </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Patient AI Co-Pilot */}
+      {latestRecord && (
+        <ClinicalCoPilot
+          patientContext={{
+            _id: user.id || user._id, // Patient's own ID
+            name: user.name,
+            prediction: latestRecord.prediction,
+            inputs: latestRecord.inputs,
+            history: records
+          }}
+        />
+      )}
     </div>
   );
 }

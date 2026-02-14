@@ -123,8 +123,10 @@ def copilot():
             score = record.get('prediction', {}).get('riskScore', 'N/A')
             history_text += f"- Date: {date}, Risk Score: {score}%\n"
 
-    # SYSTEM PROMPT
-    system_prompt = f"""
+    role = data.get('role', 'doctor') # Default to doctor if not specified
+
+    # --- DOCTOR PERSONA ---
+    doctor_prompt = f"""
     You are an AI Clinical Co-Pilot assisting a doctor.
     You are NOT diagnosing, but interpreting AI risk predictions based on structured data.
     
@@ -144,21 +146,62 @@ def copilot():
     
     User Query: {user_message}
     
-    Provide a professional, concise clinical response.
+    Provide a professional, concise clinical response. Focus on medical reasoning and data interpretation.
     """
+
+    # --- PATIENT PERSONA ---
+    patient_prompt = f"""
+    You are a friendly, empathetic AI Health Assistant talking directly to the patient, {context.get('name', 'friend')}.
+    Your goal is to explain their health data simply, without causing alarm, and motivate positive lifestyle changes.
+
+    PATIENT DATA:
+    Risk Score: {context.get('prediction', {}).get('riskScore', 'N/A')}% (This is a statistical estimate, not a diagnosis)
+    Risk Level: {context.get('prediction', {}).get('riskLevel', 'N/A')}
+    
+    VITALS:
+    BMI: {context.get('inputs', {}).get('bmi', 'N/A')}
+    Glucose: {context.get('inputs', {}).get('blood_glucose_level', 'N/A')}
+    HbA1c: {context.get('inputs', {}).get('HbA1c_level', 'N/A')}
+    Smoking: {context.get('inputs', {}).get('smoking_history', 'N/A')}
+
+    YOUR GUIDELINES:
+    1. Tone: Warm, encouraging, and clear. Avoid complex medical jargon.
+    2. Explanation: explain "Why" a factor matters (e.g., "lowering glucose helps your energy").
+    3. Actionable Steps: Suggest 1-2 small, specific lifestyle changes (e.g., "Try a 10-minute walk after dinner").
+    4. Next Steps: Remind them to follow up with their doctor for actual medical advice.
+    5. Safety: If risk is High, gently suggest consulting their doctor soon, but stay calm.
+
+    User Query: {user_message}
+    
+    Response:
+    """
+
+    # Select Prompt based on Role
+    system_prompt = doctor_prompt if role == 'doctor' else patient_prompt
 
     if not api_key:
         # FALLBACK MOCK RESPONSE (If no API Key)
         reply = "⚠️ **System Note:** No LLM API Key found. Returning rule-based response.\n\n"
         
-        if "risk" in user_message.lower():
-            reply += f"The patient has a **{context.get('prediction', {}).get('riskLevel', 'Unknown')}** risk of diabetes ({context.get('prediction', {}).get('riskScore', 0)}%). Major drivers likely include BMI ({context.get('inputs', {}).get('bmi')}) and Glucose levels."
-        elif "trend" in user_message.lower():
-            reply += "Risk capability is increasing. Monitor HbA1c trends closely over the next 3 months."
-        elif "interven" in user_message.lower():
-            reply += "Suggested interventions: \n1. Lifestyle modification (Diet/Exercise).\n2. Regular Glucose monitoring.\n3. Smoking cessation if applicable."
+        if role == 'patient':
+             if "risk" in user_message.lower():
+                reply += f"Your current health data suggests a **{context.get('prediction', {}).get('riskLevel', 'Unknown')}** risk level. This is mainly influenced by weight and sugar levels."
+             elif "trend" in user_message.lower():
+                reply += "Your health indicators have been fluctuating. It's a great time to focus on consistent healthy habits."
+             elif "interven" in user_message.lower():
+                reply += "Here are a few steps you can take:\n1. Try a 15-minute walk daily.\n2. Swap sugary drinks for water.\n3. Keep track of your meals."
+             else:
+                reply += "I'm here to help you understand your health. Ask me about your risk factors or simple steps to improve."
         else:
-            reply += "I am ready to analyze this patient. Please ask about Risk, Trends, or Interventions."
+            # DOCTOR FALLBACK
+            if "risk" in user_message.lower():
+                reply += f"The patient has a **{context.get('prediction', {}).get('riskLevel', 'Unknown')}** risk of diabetes ({context.get('prediction', {}).get('riskScore', 0)}%). Major drivers likely include BMI ({context.get('inputs', {}).get('bmi')}) and Glucose levels."
+            elif "trend" in user_message.lower():
+                reply += "Risk capability is increasing. Monitor HbA1c trends closely over the next 3 months."
+            elif "interven" in user_message.lower():
+                reply += "Suggested interventions: \n1. Lifestyle modification (Diet/Exercise).\n2. Regular Glucose monitoring.\n3. Smoking cessation if applicable."
+            else:
+                reply += "I am ready to analyze this patient. Please ask about Risk, Trends, or Interventions."
             
         return jsonify({'reply': reply})
 
