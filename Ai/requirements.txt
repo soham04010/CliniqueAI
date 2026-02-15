@@ -9,3 +9,5 @@ sys
 json 
 requests
 python-dotenv
+waitress
+pydantic
