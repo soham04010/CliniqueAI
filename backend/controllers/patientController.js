@@ -1,8 +1,7 @@
 const axios = require('axios');
 const PatientData = require('../models/PatientData');
-const CoPilotChat = require('../models/CoPilotChat'); // From Friend's code
-const mongoose = require('mongoose'); // From Your code (for Aggregation)
-
+const CoPilotChat = require('../models/CoPilotChat');
+const mongoose = require('mongoose');
 // @desc    Predict Risk
 const predictRisk = async (req, res) => {
   const { name, inputs, doctor_id } = req.body;
@@ -13,7 +12,8 @@ const predictRisk = async (req, res) => {
     // 1. AI Prediction
     let aiResult = { riskScore: 0, riskLevel: "Unknown" };
     try {
-      const response = await axios.post('http://127.0.0.1:5001/predict', inputs);
+      const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
+      const response = await axios.post(`${aiUrl}/predict`, inputs);
       aiResult = {
         riskScore: response.data.risk_score || (response.data.probability * 100),
         riskLevel: response.data.risk_level,
@@ -109,7 +109,8 @@ const getPatientHistory = async (req, res) => {
 const simulateRisk = async (req, res) => {
   const { inputs } = req.body;
   try {
-    const response = await axios.post('http://127.0.0.1:5001/predict', inputs);
+    const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
+    const response = await axios.post(`${aiUrl}/predict`, inputs);
     res.status(200).json(response.data);
   } catch (error) {
     res.status(200).json({ risk_score: 0, risk_level: "Error" });
@@ -136,7 +137,8 @@ const copilotRequest = async (req, res) => {
     // 2. Forward to Python AI Service
     // Pass user role (doctor/patient) to enable persona switching
     const role = req.user.role || 'patient';
-    const response = await axios.post('http://127.0.0.1:5001/copilot', { message, context, role });
+    const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
+    const response = await axios.post(`${aiUrl}/copilot`, { message, context, role });
     const aiReply = response.data.reply;
 
     // 3. Save Chat History if Patient Context Exists
