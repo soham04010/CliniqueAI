@@ -1,6 +1,6 @@
 const express = require('express');
-const http = require('http'); 
-const { Server } = require('socket.io'); 
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -10,35 +10,49 @@ const Message = require('./models/Message');
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app); 
+const server = http.createServer(app);
 
-// 1. Initialize Socket.io with proper CORS
-const io = new Server(server, { 
-  cors: { 
-    origin: "http://localhost:3000",
+// =================================================================
+// 1. DEFINE ALLOWED ORIGINS (Localhost + Vercel)
+// =================================================================
+const allowedOrigins = [
+  "http://localhost:3000",                  // For local testing
+  "https://clinique-ai-ten.vercel.app",     // Your deployed Vercel Frontend
+  "https://clinique-ai-ten.vercel.app/"     // Trailing slash variant (just in case)
+];
+
+// =================================================================
+// 2. INITIALIZE SOCKET.IO WITH UPDATED CORS
+// =================================================================
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
-  } 
+  }
 });
 
+// =================================================================
+// 3. INITIALIZE EXPRESS CORS
+// =================================================================
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: allowedOrigins,
   credentials: true
 }));
 
 app.use(express.json());
 
-// 2. Database Connection
+// 4. Database Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB Connected');
-    seedDoctors(); 
+    seedDoctors();
   })
   .catch(err => {
     console.error('❌ DB Connection Error:', err.message);
   });
 
-// 3. Socket.io Logic
+// 5. Socket.io Logic (Preserved exactly as your code)
 io.on("connection", (socket) => {
   // console.log("User Connected:", socket.id);
 
@@ -51,26 +65,28 @@ io.on("connection", (socket) => {
 
   socket.on("send_message", async (data) => {
     const { senderId, receiverId, message } = data;
-    
-    // FIX: Add a safety check to prevent ValidationError crash
+
+    // Safety check to prevent ValidationError crash
     if (!senderId || !receiverId || !message) {
       console.error("⚠️ Incomplete message data received. Skipping save.");
       return;
     }
 
     try {
-      // 1. Persist to Database
+      // A. Persist to Database
       const newMessage = new Message({ senderId, receiverId, message });
       await newMessage.save();
 
-      // 2. Send to Receiver and back to Sender for confirmation
+      // B. Send to Receiver
       const payload = {
         ...data,
         _id: newMessage._id,
         timestamp: newMessage.timestamp
       };
 
+      // Emit to the specific user room
       io.to(receiverId.toString()).emit("receive_message", payload);
+      
     } catch (err) {
       console.error("❌ Error saving message:", err.message);
     }
@@ -81,12 +97,12 @@ io.on("connection", (socket) => {
   });
 });
 
-// 4. API Routes
+// 6. API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/patients', require('./routes/patientRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 
-// 5. Error Handler
+// 7. Error Handler
 app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err.stack);
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
