@@ -143,12 +143,14 @@ def copilot():
     HbA1c: {context.get('inputs', {}).get('HbA1c_level', 'N/A')}
     Smoking: {context.get('inputs', {}).get('smoking_history', 'N/A')}
 
+    PREDICTION CONFIDENCE: {context.get('prediction', {}).get('confidenceLabel', 'N/A')} (Score: {context.get('prediction', {}).get('confidenceScore', 'N/A')})
+
     RISK HISTORY (Trend Analysis):
     {history_text}
     
     User Query: {user_message}
     
-    Provide a professional, concise clinical response. Focus on medical reasoning and data interpretation.
+    Provide extremely short, bulleted answers. Max 2-3 sentences. Focus strictly on key insights. No filler words.
     """
 
     # --- PATIENT PERSONA ---
@@ -167,11 +169,9 @@ def copilot():
     Smoking: {context.get('inputs', {}).get('smoking_history', 'N/A')}
 
     YOUR GUIDELINES:
-    1. Tone: Warm, encouraging, and clear. Avoid complex medical jargon.
-    2. Explanation: explain "Why" a factor matters (e.g., "lowering glucose helps your energy").
-    3. Actionable Steps: Suggest 1-2 small, specific lifestyle changes (e.g., "Try a 10-minute walk after dinner").
-    4. Next Steps: Remind them to follow up with their doctor for actual medical advice.
-    5. Safety: If risk is High, gently suggest consulting their doctor soon, but stay calm.
+    1. Tone: Warm but very direct.
+    2. Length: Max 2-3 short sentences. No fluff.
+    3. Focus: One key insight or action.
 
     User Query: {user_message}
     
