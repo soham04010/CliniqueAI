@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 
-const socket = io("http://localhost:5000");
+const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace('/api', '');
+const socket = io(SOCKET_URL);
 
 interface ChatBoxProps {
   senderId?: string;
