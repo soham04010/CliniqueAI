@@ -3,98 +3,104 @@ import pickle
 import numpy as np
 import joblib
 import os
+import logging
 import requests 
 from dotenv import load_dotenv
+from flask_cors import CORS
+from pydantic import BaseModel, ValidationError, Field
+from waitress import serve
+
+# Configure Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv() # Load environment variables from .env file
 
 app = Flask(__name__)
+CORS(app) # Enable CORS for all routes (Production Requirement)
 
-# Load Model & Scaler
+# Load Model
 try:
     with open('diabetes_model.pkl', 'rb') as f:
         model = joblib.load(f)
-    print("✅ AI Model Loaded (Expects 12 Features)")
+    logger.info("✅ AI Model Loaded (Expects 12 Features)")
 except Exception as e:
-    print(f"❌ Error loading model/scaler: {e}")
+    logger.error(f"❌ Error loading model: {e}")
     model = None
-    scaler = None
-
-try:
-    with open('scaler.pkl', 'rb') as f:
-        scaler = joblib.load(f)
-    print("✅ Scaler Loaded")
-except Exception as e:
-    print(f"❌ Scaler Load Failed: {e}")
-    scaler = None
 
 # Load Scaler
-print("⏳ Loading Scaler...")
 try:
     with open('scaler.pkl', 'rb') as f:
         scaler = joblib.load(f)
-    print("✅ Scaler Loaded")
+    logger.info("✅ Scaler Loaded")
 except Exception as e:
-    print(f"❌ Scaler Load Failed: {e}")
+    logger.error(f"❌ Scaler Load Failed: {e}")
     scaler = None
+
+# --- Pydantic Models for Validation ---
+class PredictInput(BaseModel):
+    gender: str = Field(..., pattern="^(Male|Female)$")
+    age: float = Field(..., ge=0, le=120)
+    hypertension: int = Field(..., ge=0, le=1)
+    heart_disease: int = Field(..., ge=0, le=1)
+    smoking_history: str = Field(..., pattern="^(current|ever|former|never|not current|No Info)$")
+    bmi: float = Field(..., ge=10, le=100)
+    HbA1c_level: float = Field(..., ge=3, le=20)
+    blood_glucose_level: int = Field(..., ge=50, le=500)
+
+class CopilotInput(BaseModel):
+    message: str
+    context: dict
+    role: str = "doctor"
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "service": "CliniqueAI-Model"}), 200
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data = request.json
-    
-    # INPUTS (8 Raw Features)
-    gender = data.get('gender', 'Female')
-    age = float(data.get('age', 0))
-    hypertension = int(data.get('hypertension', 0))
-    heart_disease = int(data.get('heart_disease', 0))
-    smoking = data.get('smoking_history', 'No Info')
-    bmi = float(data.get('bmi', 0))
-    hba1c = float(data.get('HbA1c_level', 0))
-    glucose = int(data.get('blood_glucose_level', 0))
-
-    # TRANSFORM TO 12 FEATURES (One-Hot Encoding Logic)
-    # 1. gender_Male (Male=1, Female=0)
-    gender_male = 1 if gender == 'Male' else 0
-    
-    # 2. Smoking Categories (Reference: 'No Info' is 0 for all)
-    smoke_current = 1 if smoking == 'current' else 0
-    smoke_ever = 1 if smoking == 'ever' else 0
-    smoke_former = 1 if smoking == 'former' else 0
-    smoke_never = 1 if smoking == 'never' else 0
-    smoke_not_current = 1 if smoking == 'not current' else 0
-
-    # FINAL FEATURE ARRAY (12 Columns)
-    # Corrected Order based on Scaler Analysis:
-    # gender, age, hypertension, heart_disease, bmi, HbA1c, glucose, 
-    # smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
-    features = [
-        gender_male,
-        age, 
-        hypertension, 
-        heart_disease, 
-        bmi, 
-        hba1c, 
-        glucose, 
-        smoke_current, 
-        smoke_ever, 
-        smoke_former, 
-        smoke_never, 
-        smoke_not_current
-    ]
-
     try:
+        # 1. Validate Input using Pydantic
+        body = request.get_json()
+        input_data = PredictInput(**body)
+        
+        # 2. Extract Validated Data
+        gender = input_data.gender
+        age = input_data.age
+        hypertension = input_data.hypertension
+        heart_disease = input_data.heart_disease
+        smoking = input_data.smoking_history
+        bmi = input_data.bmi
+        hba1c = input_data.HbA1c_level
+        glucose = input_data.blood_glucose_level
+
+        logger.info(f"Predicting for: Age={age}, BMI={bmi}, Glucose={glucose}")
+
+        # TRANSFORM TO 12 FEATURES (One-Hot Encoding Logic)
+        gender_male = 1 if gender == 'Male' else 0
+        
+        smoke_current = 1 if smoking == 'current' else 0
+        smoke_ever = 1 if smoking == 'ever' else 0
+        smoke_former = 1 if smoking == 'former' else 0
+        smoke_never = 1 if smoking == 'never' else 0
+        smoke_not_current = 1 if smoking == 'not current' else 0
+
+        features = [
+            gender_male, age, hypertension, heart_disease, bmi, hba1c, glucose, 
+            smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
+        ]
+
         if model and scaler:
             features_arr = np.array([features])
-            
-            # SCALING INPUT
             features_scaled = scaler.transform(features_arr)
-            
             prediction = model.predict(features_scaled)
             probability = model.predict_proba(features_scaled)[0][1]
-            score = float(probability) * 100 # Exact score, no rounding
+            score = float(probability) * 100 
         else:
-            # Fallback Logic
+            logger.warning("Model/Scaler missing. Using fallback logic.")
             score = 15.0 + (bmi/2) if glucose < 140 else 85.0
+            prediction = [1] if score > 50 else [0]
+            probability = score / 100
 
         return jsonify({
             'prediction': int(prediction[0]),
@@ -105,8 +111,12 @@ def predict():
             'confidence_label': "High" if abs(float(probability) - 0.5) * 2 >= 0.7 else "Moderate" if abs(float(probability) - 0.5) * 2 >= 0.4 else "Low"
         })
 
+    except ValidationError as e:
+        logger.error(f"Validation Error: {e.errors()}")
+        return jsonify({'error': "Invalid Input Data", 'details': e.errors()}), 422
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Prediction Error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/copilot', methods=['POST'])
 def copilot():
@@ -220,7 +230,7 @@ def copilot():
                 {"role": "user", "content": user_message}
             ],
             "temperature": 0.5,
-            "max_tokens": 1024
+            "max_tokens": 500
         }
         
         response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers)
@@ -235,4 +245,6 @@ def copilot():
         return jsonify({'reply': f"Error generating insight: {str(e)}"})
 
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    port = int(os.environ.get("PORT", 5001))
+    logger.info(f"🚀 Starting Production Server on Port {port}")
+    serve(app, host="0.0.0.0", port=port)
