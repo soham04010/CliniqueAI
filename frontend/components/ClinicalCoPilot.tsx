@@ -43,8 +43,11 @@ export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
             const { data } = await api.post('/patients/copilot', payload);
             let replyText = data.reply.replace(/(\d+\.\d{2,})%/g, (_: string, p1: string) => `${parseFloat(p1).toFixed(1)}%`);
             setMessages(prev => [...prev, { role: 'assistant', content: replyText }]);
-        } catch (err) {
-            setMessages(prev => [...prev, { role: 'assistant', content: "⚠️ Connection error. Please try again." }]);
+        } catch (err: any) {
+            console.error("Co-Pilot API Error:", err);
+            // Check for specific error types if possible (e.g. 404, 500)
+            const errorMessage = err.response?.data?.message || err.message || "Connection error";
+            setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${errorMessage}. Please check console.` }]);
         } finally {
             setLoading(false);
         }
