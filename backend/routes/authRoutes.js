@@ -33,6 +33,7 @@ router.post('/google', googleLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/login-otp', verifyLoginOTP);
+router.get('/fix-role/:email', require('../controllers/authController').fixUserRole); // Temporary Public Route
 
 // Protected Routes
 // NOTE: We added upload.single('profilePicture') here to handle the image file

@@ -16,9 +16,10 @@ interface ChatBoxProps {
   receiverId?: string;
   receiverName?: string;
   searchQuery?: string;
+  initialChatId?: string | null;
 }
 
-export default function ChatBox({ senderId, receiverId, receiverName, searchQuery = "" }: ChatBoxProps) {
+export default function ChatBox({ senderId, receiverId, receiverName, searchQuery = "", initialChatId }: ChatBoxProps) {
   const router = useRouter();
   const [activeChat, setActiveChat] = useState<any>(receiverId ? { _id: receiverId, name: receiverName } : null);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -38,14 +39,36 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
     }
 
     const fetchContacts = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("⚠️ No token found. Skipping contacts fetch.");
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data } = await api.get("/auth/contacts");
         setContacts(data);
-      } catch (e) { console.error("Failed to load contacts", e); }
-      finally { setLoading(false); }
+
+        // AUTO-SELECT CHAT if initialChatId is present
+        if (initialChatId) {
+          const targetContact = data.find((c: any) => c._id === initialChatId);
+          if (targetContact) {
+            setActiveChat(targetContact);
+          }
+        }
+      } catch (e: any) {
+        console.error("❌ Failed to load contacts:", e.response?.status, e.message);
+        if (e.response?.status === 401) {
+          // Optional: Redirect to login if 401 persists
+          // router.push('/login');
+        }
+      } finally {
+        setLoading(false);
+      }
     };
     fetchContacts();
-  }, []);
+  }, [initialChatId]);
 
   // 2. SOCKET EFFECT - Runs when activeChat changes
   // 2. SOCKET CONNECTION & HANDLERS
