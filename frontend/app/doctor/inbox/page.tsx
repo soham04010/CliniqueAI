@@ -1,23 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
 import ChatBox from "@/components/ChatBox";
+import { Loader2 } from "lucide-react";
 
-import { useSearchParams } from "next/navigation";
-
-export default function DoctorInboxPage() {
-  const [doctor, setDoctor] = useState<any>(null); // Changed to full object
+// 1. Move all your original logic into this Inner Component
+function InboxContent() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [doctor, setDoctor] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
   const searchParams = useSearchParams();
   const chatWithId = searchParams.get('chatWith');
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
-      const user = JSON.parse(userStr);
-      setDoctor(user);
+      try {
+        const user = JSON.parse(userStr);
+        setDoctor(user);
+      } catch (e) {
+        console.error("Error parsing user data", e);
+      }
     }
   }, []);
 
@@ -33,7 +40,8 @@ export default function DoctorInboxPage() {
         {/* HEADER */}
         <Header
           doctorName={doctor?.name || ""}
-          // You can now add doctorImage={doctor?.profilePicture} here if you update your Header component!
+          // Pass the doctor's image if available
+          doctorImage={doctor?.profilePicture || doctor?.avatar} 
           title="Inbox"
           subtitle="Patient consultations & internal messaging"
           searchQuery={searchQuery}
@@ -46,5 +54,20 @@ export default function DoctorInboxPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+// 2. Export the Main Page wrapped in Suspense to fix the build error
+export default function DoctorInboxPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+          <Loader2 className="h-10 w-10 animate-spin text-teal-600" />
+        </div>
+      }
+    >
+      <InboxContent />
+    </Suspense>
   );
 }
