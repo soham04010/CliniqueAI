@@ -15,10 +15,15 @@ const server = http.createServer(app);
 // =================================================================
 // 1. DEFINE ALLOWED ORIGINS (Localhost + Vercel)
 // =================================================================
+// =================================================================
+// 1. DEFINE ALLOWED ORIGINS (Localhost + Vercel + Env Var)
+// =================================================================
 const allowedOrigins = [
-  "http://localhost:3000",                  // For local testing
-  "https://clinique-ai-ten.vercel.app",     // Your deployed Vercel Frontend
-  "https://clinique-ai-ten.vercel.app/"     // Trailing slash variant (just in case)
+  "http://localhost:3000",
+  "https://clinique-ai-ten.vercel.app",
+  "https://clinique-ai-ten.vercel.app/",
+  // Add production domains here or via ENV
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : [])
 ];
 
 // =================================================================
@@ -42,7 +47,12 @@ app.use(cors({
 
 app.use(express.json());
 
-// 4. Database Connection
+// 4. Health Check
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
+
+// 5. Database Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB Connected');
@@ -86,7 +96,7 @@ io.on("connection", (socket) => {
 
       // Emit to the specific user room
       io.to(receiverId.toString()).emit("receive_message", payload);
-      
+
     } catch (err) {
       console.error("❌ Error saving message:", err.message);
     }
@@ -101,6 +111,7 @@ io.on("connection", (socket) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/patients', require('./routes/patientRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // 7. Error Handler
 app.use((err, req, res, next) => {

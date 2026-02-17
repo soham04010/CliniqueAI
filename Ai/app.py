@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import pickle
 import numpy as np
 import joblib
+import pandas as pd
 import os
 import logging
 import requests 
@@ -39,23 +40,22 @@ except Exception as e:
 
 # --- Pydantic Models for Validation ---
 class PredictInput(BaseModel):
-    gender: str = Field(..., pattern="^(Male|Female)$")
+    gender: int = Field(..., ge=0, le=1, description="1=Male, 0=Female")
     age: float = Field(..., ge=0, le=120)
     hypertension: int = Field(..., ge=0, le=1)
     heart_disease: int = Field(..., ge=0, le=1)
-    smoking_history: str = Field(..., pattern="^(current|ever|former|never|not current|No Info)$")
     bmi: float = Field(..., ge=10, le=100)
     HbA1c_level: float = Field(..., ge=3, le=20)
     blood_glucose_level: int = Field(..., ge=50, le=500)
+    
+    # One-Hot Encoded Smoking History
+    smoking_history_current: int = Field(..., ge=0, le=1)
+    smoking_history_ever: int = Field(..., ge=0, le=1)
+    smoking_history_former: int = Field(..., ge=0, le=1)
+    smoking_history_never: int = Field(..., ge=0, le=1)
+    smoking_history_not_current: int = Field(..., alias="smoking_history_not current", ge=0, le=1)
 
-class CopilotInput(BaseModel):
-    message: str
-    context: dict
-    role: str = "doctor"
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "healthy", "service": "CliniqueAI-Model"}), 200
+# ... (omitted CopilotInput and health_check)
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -64,43 +64,48 @@ def predict():
         body = request.get_json()
         input_data = PredictInput(**body)
         
-        # 2. Extract Validated Data
-        gender = input_data.gender
-        age = input_data.age
-        hypertension = input_data.hypertension
-        heart_disease = input_data.heart_disease
-        smoking = input_data.smoking_history
-        bmi = input_data.bmi
-        hba1c = input_data.HbA1c_level
-        glucose = input_data.blood_glucose_level
+        # 2. Extract Validated Data in Exact Order for Scaler
+        feature_data = {
+            "gender": [input_data.gender],
+            "age": [input_data.age],
+            "hypertension": [input_data.hypertension],
+            "heart_disease": [input_data.heart_disease],
+            "bmi": [input_data.bmi],
+            "HbA1c_level": [input_data.HbA1c_level],
+            "blood_glucose_level": [input_data.blood_glucose_level],
+            "smoking_history_current": [input_data.smoking_history_current],
+            "smoking_history_ever": [input_data.smoking_history_ever],
+            "smoking_history_former": [input_data.smoking_history_former],
+            "smoking_history_never": [input_data.smoking_history_never],
+            "smoking_history_not current": [input_data.smoking_history_not_current]
+        }
 
-        logger.info(f"Predicting for: Age={age}, BMI={bmi}, Glucose={glucose}")
+        # Create DataFrame with valid feature names
+        features_df = pd.DataFrame(feature_data)
 
-        # TRANSFORM TO 12 FEATURES (One-Hot Encoding Logic)
-        gender_male = 1 if gender == 'Male' else 0
-        
-        smoke_current = 1 if smoking == 'current' else 0
-        smoke_ever = 1 if smoking == 'ever' else 0
-        smoke_former = 1 if smoking == 'former' else 0
-        smoke_never = 1 if smoking == 'never' else 0
-        smoke_not_current = 1 if smoking == 'not current' else 0
-
-        features = [
-            gender_male, age, hypertension, heart_disease, bmi, hba1c, glucose, 
-            smoke_current, smoke_ever, smoke_former, smoke_never, smoke_not_current
-        ]
+        logger.info(f"Predicting for Features: {features_df.to_dict(orient='records')[0]}")
 
         if model and scaler:
-            features_arr = np.array([features])
-            features_scaled = scaler.transform(features_arr)
+            # Transform using DataFrame to preserve feature names
+            features_scaled = scaler.transform(features_df)
             prediction = model.predict(features_scaled)
             probability = model.predict_proba(features_scaled)[0][1]
             score = float(probability) * 100 
         else:
             logger.warning("Model/Scaler missing. Using fallback logic.")
-            score = 15.0 + (bmi/2) if glucose < 140 else 85.0
+            # Simple fallback based on BMI/Glucose
+            score = 15.0 + (input_data.bmi/2) if input_data.blood_glucose_level < 140 else 85.0
             prediction = [1] if score > 50 else [0]
             probability = score / 100
+
+        return jsonify({
+            'prediction': int(prediction[0]),
+            'probability': float(probability),
+            'risk_score': float(score),
+            'risk_level': "High" if probability > 0.7 else "Moderate" if probability > 0.3 else "Low",
+            'confidence_score': round(abs(float(probability) - 0.5) * 2, 2),
+            'confidence_label': "High" if abs(float(probability) - 0.5) * 2 >= 0.7 else "Moderate" if abs(float(probability) - 0.5) * 2 >= 0.4 else "Low"
+        })
 
         return jsonify({
             'prediction': int(prediction[0]),

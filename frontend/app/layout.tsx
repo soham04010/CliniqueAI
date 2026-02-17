@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "Predictive Health Intelligence",
 };
 
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,8 +30,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <Toaster />
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          {children}
+          <Toaster richColors closeButton />
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

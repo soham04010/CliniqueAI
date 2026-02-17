@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  predictRisk, 
-  getPatients, 
-  getPatientById, 
-  getPatientHistory, 
-  simulateRisk, 
-  copilotRequest, 
+const {
+  predictRisk,
+  getPatients,
+  getPatientById,
+  getPatientHistory,
+  simulateRisk,
+  copilotRequest,
   getCoPilotHistory,
-  deletePatient 
+  deletePatient,
+  updatePatientDetails
 } = require('../controllers/patientController');
 const { protect } = require('../middleware/auth');
 
@@ -26,6 +27,7 @@ router.get('/:id', protect, getPatientById);
 router.get('/history/:name', protect, getPatientHistory);
 
 // Data Management (Your logic)
+router.put('/:id', protect, updatePatientDetails);
 router.delete('/:name', protect, deletePatient);
 
 module.exports = router;
