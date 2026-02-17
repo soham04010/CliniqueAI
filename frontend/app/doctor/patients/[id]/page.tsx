@@ -552,9 +552,13 @@ export default function PatientDetailsPage() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2 pt-2">
-                        <Button onClick={saveMetadata} size="sm" className="flex-1 h-8 bg-slate-900 text-xs">Save</Button>
-                        <Button onClick={() => setIsEditingMetadata(false)} size="sm" variant="ghost" className="h-8 px-2"><X size={14} /></Button>
+                      <div className="flex items-center gap-2 pt-2">
+                        <Button variant="outline" onClick={() => setIsEditingMetadata(false)} size="sm" className="flex-1 h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50">
+                          Cancel
+                        </Button>
+                        <Button onClick={saveMetadata} size="sm" className="flex-1 h-8 bg-slate-900 hover:bg-slate-800 text-white text-xs shadow-sm">
+                          Save Changes
+                        </Button>
                       </div>
                     </div>
                   ) : (
