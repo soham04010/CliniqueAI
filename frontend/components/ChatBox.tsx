@@ -166,15 +166,15 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#F0F2F5] min-h-0">
               {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.isMe ? "justify-end" : "justify-start"} mb-4`}>
-                  <div className={`max-w-[75%] p-4 rounded-2xl text-sm shadow-md relative group transition-all duration-200 hover:shadow-lg ${msg.isMe
-                    ? "bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-tr-sm shadow-teal-500/20"
-                    : "bg-white text-slate-700 rounded-tl-sm border border-slate-100/50 shadow-slate-200/50"
+                <div key={i} className={`flex ${msg.isMe ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] sm:max-w-[70%] p-3 px-4 rounded-2xl text-[15px] shadow-sm relative group transition-all duration-200 ${msg.isMe
+                    ? "bg-[#005C4B] text-white rounded-tr-none shadow-md"
+                    : "bg-white text-slate-800 rounded-tl-none shadow-sm"
                     }`}>
-                    <p className="leading-relaxed">{msg.message}</p>
-                    <p className={`text-[10px] mt-2 font-medium opacity-70 ${msg.isMe ? "text-teal-100/80 text-right" : "text-slate-400 text-left"}`}>
+                    <p className="leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                    <p className={`text-[10px] mt-1 font-medium ${msg.isMe ? "text-white/70 text-right" : "text-slate-400 text-left"}`}>
                       {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -184,21 +184,34 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white/50 border-t border-slate-100 backdrop-blur-sm">
-              <div className="flex gap-3 items-end max-w-4xl mx-auto">
-                <div className="flex-1 relative bg-white rounded-2xl shadow-sm border border-slate-200 focus-within:border-teal-400 focus-within:ring-4 focus-within:ring-teal-500/10 transition-all duration-300">
-                  <Input
+            <div className="p-3 bg-[#F0F2F5] border-t border-slate-200">
+              <div className="flex gap-2 items-end max-w-4xl mx-auto w-full">
+                <div className="flex-1 relative bg-white rounded-2xl shadow-sm border border-slate-200 focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 transition-all duration-200">
+                  <textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Type your message..."
-                    className="w-full bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 px-4 py-3 h-auto min-h-[44px] text-slate-700 placeholder:text-slate-400 resize-none rounded-2xl"
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    rows={1}
+                    className="w-full bg-transparent border-none focus:outline-none px-4 py-3 text-slate-800 placeholder:text-slate-400 resize-none max-h-[150px] min-h-[44px] block"
+                    style={{ height: 'auto', overflowY: message.split('\n').length > 5 ? 'auto' : 'hidden' }}
                   />
                 </div>
                 <Button
                   onClick={sendMessage}
                   disabled={!message.trim()}
-                  className="h-11 w-11 p-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-lg shadow-teal-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none"
+                  className="h-11 w-11 p-0 rounded-full bg-[#005C4B] hover:bg-[#004a3c] text-white shadow-lg shadow-teal-900/10 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none flex-none mb-0.5"
                 >
                   <Send className="h-5 w-5 ml-0.5" />
                 </Button>

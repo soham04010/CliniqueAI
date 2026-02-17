@@ -34,7 +34,7 @@ export default function PatientMessagesPage() {
     if (loading) return null;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 flex flex-col">
+        <div className="h-screen bg-[#F8FAFC] font-sans text-slate-900 flex flex-col overflow-hidden">
 
             {/* Header */}
             <header className="bg-white border-b border-slate-200 sticky top-0 z-30 flex-none">
