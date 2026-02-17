@@ -6,7 +6,6 @@ import {
     Activity,
     LayoutDashboard,
     MessageSquare,
-    CheckSquare,
     Settings,
     LogOut,
     ChevronUp
@@ -38,6 +37,14 @@ export default function PatientSidebar() {
                     console.error("Failed to parse user data", e);
                 }
             }
+            
+            // Listen for profile updates (photo changes)
+            const handleStorageChange = () => {
+                const updatedStr = localStorage.getItem("user");
+                if (updatedStr) setUser(JSON.parse(updatedStr));
+            };
+            window.addEventListener("storage", handleStorageChange);
+            return () => window.removeEventListener("storage", handleStorageChange);
         }
     }, []);
 
@@ -92,7 +99,8 @@ export default function PatientSidebar() {
                         <DropdownMenuTrigger asChild>
                             <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group select-none">
                                 <Avatar className="h-9 w-9 border border-slate-200">
-                                    <AvatarImage src={user?.avatar} />
+                                    {/* UPDATED: Prioritize profilePicture */}
+                                    <AvatarImage src={user?.profilePicture || user?.avatar} className="object-cover" />
                                     <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
                                         {user?.name ? user.name.charAt(0).toUpperCase() : 'P'}
                                     </AvatarFallback>

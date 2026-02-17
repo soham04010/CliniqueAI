@@ -6,14 +6,14 @@ import Header from "@/components/doctor/Header";
 import ChatBox from "@/components/ChatBox";
 
 export default function DoctorInboxPage() {
-  const [doctorName, setDoctorName] = useState("");
+  const [doctor, setDoctor] = useState<any>(null); // Changed to full object
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
       const user = JSON.parse(userStr);
-      setDoctorName(user.name);
+      setDoctor(user);
     }
   }, []);
 
@@ -28,7 +28,8 @@ export default function DoctorInboxPage() {
 
         {/* HEADER */}
         <Header
-          doctorName={doctorName}
+          doctorName={doctor?.name || ""}
+          // You can now add doctorImage={doctor?.profilePicture} here if you update your Header component!
           title="Inbox"
           subtitle="Patient consultations & internal messaging"
           searchQuery={searchQuery}
