@@ -170,12 +170,13 @@ const loginUser = async (req, res) => {
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
-    const user = await User.findOne({ email });
+    // Case-insensitive email search
+    const user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
     if (!user) return res.status(404).json({ message: "Email not registered." });
 
-    if (user.role === 'doctor') {
-      return res.status(403).json({ message: "Doctors must contact Admin." });
-    }
+    // if (user.role === 'doctor') {
+    //   return res.status(403).json({ message: "Doctors must contact Admin." });
+    // }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.resetPasswordOTP = otp;
@@ -204,13 +205,27 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
   try {
+    console.log(`🔑 Reset Password Request: Email=${email}, OTP=${otp}`);
+
+    // Debug: Find user by email first to check OTP status
+    const debugUser = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
+    if (debugUser) {
+      console.log(`🔎 Debug User Found: OTP=${debugUser.resetPasswordOTP}, Expires=${debugUser.resetPasswordExpire}, Now=${new Date()}`);
+      console.log(`⏱️ Time Left: ${(new Date(debugUser.resetPasswordExpire) - new Date()) / 1000}s`);
+    } else {
+      console.log("❌ Debug User Not Found");
+    }
+
     const user = await User.findOne({
-      email,
+      email: { $regex: new RegExp(`^${email}$`, 'i') },
       resetPasswordOTP: otp,
-      resetPasswordExpire: { $gt: Date.now() }
+      resetPasswordExpire: { $gt: Date.now() } // Ensure this matches DB format
     });
 
-    if (!user) return res.status(400).json({ message: "Invalid or Expired OTP" });
+    if (!user) {
+      console.warn("⚠️ OTP Verification Failed: Invalid Code or Expired.");
+      return res.status(400).json({ message: "Invalid or Expired OTP" });
+    }
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
