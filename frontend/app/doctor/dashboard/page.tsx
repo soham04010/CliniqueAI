@@ -716,11 +716,11 @@ export default function DoctorDashboard() {
             />
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-none bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="h-10 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={deleteConfirmation !== patientToDelete?.name}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl"
+              className="h-10 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/20"
             >
               Confirm Delete
             </AlertDialogAction>
