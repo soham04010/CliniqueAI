@@ -1,21 +1,19 @@
 const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {
-  // Use specific SMTP settings instead of the 'service' shortcut
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,                 // Standard port for modern email sending
-    secure: false,             // false for port 587 (uses STARTTLS)
+    port: 587,
+    secure: false, // Use TLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    // 👇 THIS IS THE KEY FIX FOR RENDER
     tls: {
-      ciphers: 'SSLv3',        // Helps compatibility
-      rejectUnauthorized: false // (Optional) Helps if certificates are fussy
+      ciphers: 'SSLv3',
     },
-    // Explicitly force IPv4 here as well
-    family: 4, 
+    family: 4, // Force IPv4 at transport level
   });
 
   const message = {
@@ -29,8 +27,7 @@ const sendEmail = async (options) => {
     const info = await transporter.sendMail(message);
     console.log("✅ Email sent: %s", info.messageId);
   } catch (error) {
-    console.error("❌ Email Error:", error.message); 
-    // Throw error so your frontend knows it failed
+    console.error("❌ Email Error:", error.message);
     throw new Error("Email sending failed");
   }
 };
