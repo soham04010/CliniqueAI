@@ -2,11 +2,12 @@ const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {
   const transporter = nodemailer.createTransport({
-    // "service: gmail" automatically sets host, port 465, and secure: true
     service: 'gmail', 
+    // FORCE IPv4 to fix the ENETUNREACH error on Render
+    family: 4, 
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // MUST be an App Password
+      pass: process.env.EMAIL_PASS, // Make sure this is your App Password
     },
   });
 
@@ -22,8 +23,8 @@ const sendEmail = async (options) => {
     console.log("✅ Email sent: %s", info.messageId);
   } catch (error) {
     console.error("❌ Email Error:", error);
-    // Throwing error allows the controller to handle the failure (e.g. return 500)
-    throw new Error("Email could not be sent");
+    // Important: Don't just log, throw so the controller knows it failed
+    throw new Error("Email sending failed"); 
   }
 };
 
