@@ -56,7 +56,22 @@ const predictRisk = async (req, res) => {
 
     } else {
       recordData.patient_id = userId;
-      if (doctor_id) recordData.doctor_id = doctor_id;
+
+      // Patient assigning their doctor
+      if (req.body.doctor_email) {
+        const User = require('../models/User');
+        const doctorUser = await User.findOne({ email: req.body.doctor_email, role: 'doctor' });
+
+        if (doctorUser) {
+          recordData.doctor_id = doctorUser._id;
+          console.log(`🔗 Patient [${name}] linked to Doctor [${doctorUser.name}]`);
+        } else {
+          console.warn(`⚠️ Doctor email not found: ${req.body.doctor_email}`);
+          // Optional: You could return a warning here, but we proceed with just the risk analysis
+        }
+      } else if (doctor_id) {
+        recordData.doctor_id = doctor_id; // Legacy/Fallback
+      }
     }
 
     const newRecord = await PatientData.create(recordData);

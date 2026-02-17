@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { Send, MessageSquare, Loader2, User as UserIcon, ExternalLink } from "lucide-react";
+import { Send, MessageSquare, Loader2, User as UserIcon, ExternalLink, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,6 +28,7 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
   const [currentUser, setCurrentUser] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 1. INIT EFFECT (User & Contacts) - Runs once
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
@@ -44,22 +45,66 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
       finally { setLoading(false); }
     };
     fetchContacts();
+  }, []);
 
-    socket.on("receive_message", (data) => {
-      if (activeChat && data.senderId === activeChat._id) {
-        setMessages((prev) => [...prev, data]);
+  // 2. SOCKET EFFECT - Runs when activeChat changes
+  // 2. SOCKET CONNECTION & HANDLERS
+  useEffect(() => {
+    // A. Re-join room on reconnection (Fixes "Network Blip" issue)
+    const handleConnect = () => {
+      console.log("🔌 Socket Connected:", socket.id);
+      if (currentUser) {
+        const userId = currentUser.id || currentUser._id;
+        console.log("➡️ Re-joining Room:", userId);
+        socket.emit("join_room", userId);
       }
-    });
-    return () => { socket.off("receive_message"); };
-  }, [activeChat]);
+    };
 
+    // B. Handle Incoming Messages
+    const handleReceiveMessage = (data: any) => {
+      console.log("📩 New Message Received:", data);
+
+      // Ensure specific typing for comparison
+      const msgSenderId = String(data.senderId);
+      const activeChatId = activeChat ? String(activeChat._id) : null;
+      const currentUserId = currentUser ? String(currentUser.id || currentUser._id) : null;
+
+      console.log(`🔎 Checking Match: Sender=${msgSenderId} vs Active=${activeChatId}`);
+
+      if (activeChatId && msgSenderId === activeChatId) {
+        console.log("✅ Match! Updating UI...");
+        setMessages((prev) => [...prev, { ...data, isMe: msgSenderId === currentUserId }]);
+
+        // Optional: Scroll to bottom immediately
+        if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "smooth" });
+      } else {
+        console.log("⚠️ No Match or Inactive Chat. Message queued in background.");
+        // In a real app, you'd increment a logical unread count here
+      }
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("receive_message", handleReceiveMessage);
+
+    // Initial Join (if already connected but component remounted)
+    if (socket.connected && currentUser) {
+      handleConnect();
+    }
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("receive_message", handleReceiveMessage);
+    };
+  }, [activeChat, currentUser]);
+
+  // 3. HISTORY EFFECT
   useEffect(() => {
     if (activeChat && currentUser) {
       const fetchHistory = async () => {
         try {
           const cid = currentUser.id || currentUser._id;
           const { data } = await api.get(`/chat/${cid}/${activeChat._id}`);
-          setMessages(data.map((m: any) => ({ ...m, isMe: m.senderId === cid })));
+          setMessages(data.map((m: any) => ({ ...m, isMe: String(m.senderId) === String(cid) })));
         } catch (e) { console.error("History failed"); }
       };
       fetchHistory();
@@ -160,10 +205,26 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
               </div>
 
               {currentUser?.role === 'doctor' && (
-                <Button onClick={handleViewPatientInfo} size="sm" variant="outline" className="h-8 border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 text-[10px] font-bold uppercase tracking-wider rounded-lg gap-1.5">
+                <Button onClick={handleViewPatientInfo} size="sm" variant="outline" className="h-8 border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 text-[10px] font-bold uppercase tracking-wider rounded-lg gap-1.5 mr-2">
                   <ExternalLink size={12} /> Patient Chart
                 </Button>
               )}
+              <Button
+                onClick={async () => {
+                  try {
+                    const cid = currentUser.id || currentUser._id;
+                    await api.delete(`/chat/${cid}/${activeChat._id}`);
+                    setMessages([]); // Clear local messages
+                    // alert("Chat history deleted."); // Optional: Use toast
+                  } catch (e) { console.error("Failed to delete chat", e); }
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                title="Delete Conversation"
+              >
+                <Trash2 size={16} />
+              </Button>
             </div>
 
             {/* Messages */}

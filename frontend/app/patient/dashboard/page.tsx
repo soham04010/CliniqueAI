@@ -52,7 +52,8 @@ export default function PatientDashboard() {
         heart_disease: '0',
         glucose: '',
         hba1c: '',
-        bmi: ''
+        bmi: '',
+        doctor_email: ''
     });
 
     const handleUpdateVitals = async () => {
@@ -101,7 +102,8 @@ export default function PatientDashboard() {
             const { data: newRecord } = await api.post('/patients/predict', {
                 name: patient.name,
                 inputs: newInputs,
-                doctor_id: patient.doctor_id
+                doctor_id: patient.doctor_id,
+                doctor_email: vitalsForm.doctor_email // Send email for lookup
             });
 
             setPatient({ ...patient, ...newRecord });
@@ -241,15 +243,23 @@ export default function PatientDashboard() {
                             <div className="p-6 space-y-6">
                                 {/* Physician Info */}
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consulting Physician</Label>
-                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
-                                            DR
-                                        </div>
-                                        <div className="text-sm font-semibold text-slate-700">
-                                            {patient?.doctor_id || 'Dr. Assigned Panel'}
+                                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consulting Physician (Email)</Label>
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative flex-1">
+                                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500">
+                                                <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold">DR</div>
+                                            </div>
+                                            <Input
+                                                placeholder="Enter Doctor's Email..."
+                                                value={vitalsForm.doctor_email}
+                                                onChange={(e) => setVitalsForm({ ...vitalsForm, doctor_email: e.target.value })}
+                                                className="pl-11 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                            />
                                         </div>
                                     </div>
+                                    <p className="text-[10px] text-slate-400 font-medium px-1">
+                                        Connect with your doctor to share these results instantly.
+                                    </p>
                                 </div>
 
                                 {/* Personal Stats Grid */}
