@@ -6,6 +6,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const seedDoctors = require('./utils/seedDoctors');
 const Message = require('./models/Message');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
