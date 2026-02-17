@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer'); // Import Multer
 const User = require('../models/User');
-const PatientData = require('../models/PatientData'); 
+const PatientData = require('../models/PatientData');
 const {
   registerUser,
   loginUser,
@@ -65,18 +65,40 @@ router.get('/contacts', protect, async (req, res) => {
     const userId = req.user._id;
     const role = req.user.role;
 
+    const Message = require('../models/Message'); // Import Message Model
+
+    // 1. Fetch Clinical Links (Existing Logic)
+    let clinicalIds = [];
     if (role === 'patient') {
       const distinctDoctorIds = await PatientData.distinct('doctor_id', { patient_id: userId });
-      const validDoctorIds = distinctDoctorIds.filter(id => id != null);
-      const doctors = await User.find({ _id: { $in: validDoctorIds } }).select('name _id role profilePicture avatar');
-      res.json(doctors);
+      clinicalIds = distinctDoctorIds.filter(id => id != null);
     } else {
       const distinctPatientIds = await PatientData.distinct('patient_id', { doctor_id: userId });
-      const validPatientIds = distinctPatientIds.filter(id => id != null);
-      const patients = await User.find({ _id: { $in: validPatientIds } }).select('name _id role profilePicture avatar');
-      res.json(patients);
+      clinicalIds = distinctPatientIds.filter(id => id != null);
     }
+
+    // 2. Fetch Chat History Links (New Logic)
+    // Find all users who have sent messages TO me or received messages FROM me
+    const messages = await Message.find({
+      $or: [{ senderId: userId }, { receiverId: userId }]
+    }).select('senderId receiverId');
+
+    const chatIds = new Set();
+    messages.forEach(msg => {
+      if (msg.senderId.toString() !== userId.toString()) chatIds.add(msg.senderId.toString());
+      if (msg.receiverId.toString() !== userId.toString()) chatIds.add(msg.receiverId.toString());
+    });
+
+    // 3. Merge Unique IDs
+    const allContactIds = [...new Set([...clinicalIds.map(id => id.toString()), ...chatIds])];
+
+    // 4. Fetch User Details
+    const contacts = await User.find({ _id: { $in: allContactIds } })
+      .select('name _id role profilePicture avatar email phone');
+
+    res.json(contacts);
   } catch (error) {
+    console.error("Contacts Fetch Error:", error);
     res.status(500).json({ message: error.message });
   }
 });
