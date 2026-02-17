@@ -84,7 +84,7 @@ const registerUser = async (req, res) => {
       console.error("❌ EMAIL FAILED:", emailError.message);
       res.status(201).json({
         message: 'Account created but email failed. Check console for code.',
-        devOtp: otp 
+        devOtp: otp
       });
     }
 
@@ -244,14 +244,14 @@ const updateProfile = async (req, res) => {
       if (req.file) {
         const streamUpload = (fileBuffer) => {
           return new Promise((resolve, reject) => {
-              const stream = cloudinary.uploader.upload_stream(
-                  { folder: "clinique_patients" },
-                  (error, result) => {
-                      if (result) resolve(result);
-                      else reject(error);
-                  }
-              );
-              streamifier.createReadStream(fileBuffer).pipe(stream);
+            const stream = cloudinary.uploader.upload_stream(
+              { folder: "clinique_patients" },
+              (error, result) => {
+                if (result) resolve(result);
+                else reject(error);
+              }
+            );
+            streamifier.createReadStream(fileBuffer).pipe(stream);
           });
         };
 
@@ -308,54 +308,54 @@ const updatePassword = async (req, res) => {
 // @desc    Request Password Change OTP
 // @route   POST /api/auth/request-password-otp
 const requestPasswordChangeOtp = async (req, res) => {
-    try {
-        const user = await User.findById(req.user._id);
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        user.verificationCode = otp;
-        user.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
-        await user.save();
+  try {
+    const user = await User.findById(req.user._id);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        await sendEmail({
-            to: user.email,
-            subject: 'Secure Password Change Code',
-            html: `<h1>Password Change Request</h1><p>Your Code: <strong>${otp}</strong></p>`
-        });
+    user.verificationCode = otp;
+    user.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
+    await user.save();
 
-        res.status(200).json({ message: "Verification code sent to email." });
-    } catch (error) {
-        res.status(500).json({ message: "Failed to send code" });
-    }
+    await sendEmail({
+      to: user.email,
+      subject: 'Secure Password Change Code',
+      html: `<h1>Password Change Request</h1><p>Your Code: <strong>${otp}</strong></p>`
+    });
+
+    res.status(200).json({ message: "Verification code sent to email." });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to send code" });
+  }
 };
 
 // @desc    Verify OTP and Update Password (Secure)
 // @route   PUT /api/auth/update-password-secure
 const updatePasswordSecure = async (req, res) => {
-    const { currentPassword, newPassword, otp } = req.body;
-    try {
-        const user = await User.findById(req.user._id);
-        
-        // 1. Verify OTP
-        if (user.verificationCode !== otp || user.verificationCodeExpire < Date.now()) {
-            return res.status(400).json({ message: "Invalid or expired verification code" });
-        }
+  const { currentPassword, newPassword, otp } = req.body;
+  try {
+    const user = await User.findById(req.user._id);
 
-        // 2. Verify Current Password
-        if (!(await bcrypt.compare(currentPassword, user.password))) {
-            return res.status(401).json({ message: 'Invalid current password' });
-        }
-
-        // 3. Update Password
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        user.verificationCode = undefined;
-        user.verificationCodeExpire = undefined;
-        await user.save();
-
-        res.json({ message: 'Password updated successfully' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    // 1. Verify OTP
+    if (user.verificationCode !== otp || user.verificationCodeExpire < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired verification code" });
     }
+
+    // 2. Verify Current Password
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(401).json({ message: 'Invalid current password' });
+    }
+
+    // 3. Update Password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.verificationCode = undefined;
+    user.verificationCodeExpire = undefined;
+    await user.save();
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // @desc    Verify OTP for Login
@@ -475,7 +475,7 @@ const googleLogin = async (req, res) => {
 // @route   POST /api/auth/request-phone-otp
 const requestPhoneChangeOtp = async (req, res) => {
   const { phoneNumber } = req.body; // New number to verify
-  
+
   try {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -490,19 +490,19 @@ const requestPhoneChangeOtp = async (req, res) => {
 
     // Try Sending SMS via Twilio
     try {
-        await twilioClient.messages.create({
-            body: `CliniqueAI Verification Code: ${otp}`,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            to: phoneNumber // Ensure frontend sends with country code (e.g. +1...)
-        });
-        res.status(200).json({ message: "SMS sent successfully." });
+      await twilioClient.messages.create({
+        body: `CliniqueAI Verification Code: ${otp}`,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: phoneNumber // Ensure frontend sends with country code (e.g. +1...)
+      });
+      res.status(200).json({ message: "SMS sent successfully." });
     } catch (smsError) {
-        console.error("Twilio Error:", smsError);
-        // Fallback for Dev Mode or if Twilio fails (prevent UI hang)
-        res.status(200).json({ 
-            message: "SMS failed (Dev Mode). Check console.", 
-            devOtp: otp 
-        });
+      console.error("Twilio Error:", smsError);
+      // Fallback for Dev Mode or if Twilio fails (prevent UI hang)
+      res.status(200).json({
+        message: "SMS failed (Dev Mode). Check console.",
+        devOtp: otp
+      });
     }
   } catch (error) {
     res.status(500).json({ message: "Failed to generate OTP" });
@@ -525,7 +525,7 @@ const verifyPhoneChangeOtp = async (req, res) => {
     // Update Phone
     user.mobileNumber = phoneNumber; // Update verified number field
     user.isMobileVerified = true;
-    
+
     // Clear OTP
     user.verificationCode = undefined;
     user.verificationCodeExpire = undefined;
@@ -545,6 +545,23 @@ const verifyPhoneChangeOtp = async (req, res) => {
   }
 };
 
+// @desc    Temporary Fix for User Role (Dev Helper)
+// @route   GET /api/auth/fix-role/:email
+const fixUserRole = async (req, res) => {
+  const { email } = req.params;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.role = 'patient';
+    await user.save();
+
+    res.json({ message: `Successfully updated role for ${email} to 'patient'. You can now use Forgot Password.` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyOTP,
@@ -553,11 +570,12 @@ module.exports = {
   resetPassword,
   updateProfile,
   updatePassword,
-  updatePasswordSecure, // NEW EXPORT
+  updatePasswordSecure,
   verifyLoginOTP,
   toggle2FA,
   googleLogin,
   requestPhoneChangeOtp,
-  requestPasswordChangeOtp, // NEW EXPORT
-  verifyPhoneChangeOtp
+  requestPasswordChangeOtp,
+  verifyPhoneChangeOtp,
+  fixUserRole // NEW EXPORT
 };

@@ -311,6 +311,20 @@ export default function PatientDetailsPage() {
                   </Badge>
                 );
               })()}
+              <Button
+                onClick={() => {
+                  // Navigate to Inbox with auto-select
+                  const targetId = patient.patient_id || patient._id; // Prefer linked user ID
+                  router.push(`/doctor/inbox?chatWith=${targetId}`);
+                }}
+                variant="outline"
+                className="border-slate-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-200 shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+                  Message
+                </div>
+              </Button>
               <Button onClick={() => generatePatientReport(patient)} variant="outline" className="border-slate-200 text-slate-700 hover:bg-white hover:text-slate-900 shadow-sm">
                 <FileDown className="mr-2 h-4 w-4" /> Report
               </Button>

@@ -5,9 +5,13 @@ import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
 import ChatBox from "@/components/ChatBox";
 
+import { useSearchParams } from "next/navigation";
+
 export default function DoctorInboxPage() {
   const [doctor, setDoctor] = useState<any>(null); // Changed to full object
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
+  const chatWithId = searchParams.get('chatWith');
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -38,7 +42,7 @@ export default function DoctorInboxPage() {
 
         {/* INBOX CONTENT (Real ChatBox) */}
         <div className="flex-1 overflow-hidden p-6">
-          <ChatBox searchQuery={searchQuery} />
+          <ChatBox searchQuery={searchQuery} initialChatId={chatWithId} />
         </div>
       </main>
     </div>
