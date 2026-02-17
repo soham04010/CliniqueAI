@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer'); // Import Multer
 const User = require('../models/User');
-const PatientData = require('../models/PatientData'); // Required for relationship logic
+const PatientData = require('../models/PatientData'); 
 const {
   registerUser,
   loginUser,
@@ -14,24 +15,41 @@ const {
   verifyLoginOTP,
   googleLogin,
   requestPhoneChangeOtp,
-  verifyPhoneChangeOtp
+  verifyPhoneChangeOtp,
+  requestPasswordChangeOtp, // NEW Import
+  updatePasswordSecure      // NEW Import
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
+// 1. CONFIGURE MULTER (Memory Storage for Cloudinary)
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Public Routes
 router.post('/register', registerUser);
 router.post('/verify-otp', verifyOTP);
 router.post('/login', loginUser);
-router.post('/google', googleLogin); // Google Auth Route
+router.post('/google', googleLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.put('/profile', protect, updateProfile);
-router.put('/password', protect, updatePassword);
-router.put('/2fa', protect, toggle2FA);
 router.post('/login-otp', verifyLoginOTP);
-router.post('/request-phone-otp', protect, requestPhoneChangeOtp);
-router.put('/update-phone', protect, verifyPhoneChangeOtp);
 
-// Route for the initial "Select Doctor" dropdown in the test form
+// Protected Routes
+// NOTE: We added upload.single('profilePicture') here to handle the image file
+router.put('/profile', protect, upload.single('profilePicture'), updateProfile);
+
+router.put('/password', protect, updatePassword); // Old simple password update
+router.put('/2fa', protect, toggle2FA);
+
+// NEW: Secure Password Change Routes
+router.post('/request-password-otp', protect, requestPasswordChangeOtp);
+router.put('/update-password-secure', protect, updatePasswordSecure);
+
+// NEW: Phone Verification Routes
+router.post('/request-phone-otp', protect, requestPhoneChangeOtp);
+router.put('/verify-phone-update', protect, verifyPhoneChangeOtp); // Aligning with frontend call
+
+// Route for the initial "Select Doctor" dropdown
 router.get('/doctors', protect, async (req, res) => {
   try {
     const doctors = await User.find({ role: 'doctor' }).select('name _id');
@@ -41,23 +59,21 @@ router.get('/doctors', protect, async (req, res) => {
   }
 });
 
-// NEW: Restricted Contact List for the WhatsApp-style Inbox
+// Restricted Contact List for Chat
 router.get('/contacts', protect, async (req, res) => {
   try {
     const userId = req.user._id;
     const role = req.user.role;
 
     if (role === 'patient') {
-      // Patients: Find doctors they have actually assigned a test to
       const distinctDoctorIds = await PatientData.distinct('doctor_id', { patient_id: userId });
       const validDoctorIds = distinctDoctorIds.filter(id => id != null);
-      const doctors = await User.find({ _id: { $in: validDoctorIds } }).select('name _id role');
+      const doctors = await User.find({ _id: { $in: validDoctorIds } }).select('name _id role profilePicture avatar');
       res.json(doctors);
     } else {
-      // Doctors: Find patients who have performed a test under their ID
       const distinctPatientIds = await PatientData.distinct('patient_id', { doctor_id: userId });
       const validPatientIds = distinctPatientIds.filter(id => id != null);
-      const patients = await User.find({ _id: { $in: validPatientIds } }).select('name _id role');
+      const patients = await User.find({ _id: { $in: validPatientIds } }).select('name _id role profilePicture avatar');
       res.json(patients);
     }
   } catch (error) {

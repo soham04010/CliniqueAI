@@ -2,6 +2,22 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+const twilio = require('twilio');
+
+// 1. CONFIGURE CLOUDINARY
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// 2. CONFIGURE TWILIO
+const twilioClient = new twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 // Generate Token
 const generateToken = (id) => {
@@ -47,7 +63,6 @@ const registerUser = async (req, res) => {
       }
     } catch (linkError) {
       console.error("⚠️ Failed to auto-link patient record:", linkError.message);
-      // Continue usually, don't fail registration
     }
 
     // Send Email
@@ -64,13 +79,12 @@ const registerUser = async (req, res) => {
         subject: 'CliniqueAI Verification Code',
         html: message,
       });
-      // Send success response
       res.status(201).json({ message: 'OTP Sent to email', email: user.email });
     } catch (emailError) {
       console.error("❌ EMAIL FAILED:", emailError.message);
       res.status(201).json({
         message: 'Account created but email failed. Check console for code.',
-        devOtp: otp // For testing purposes only
+        devOtp: otp 
       });
     }
 
@@ -131,13 +145,16 @@ const loginUser = async (req, res) => {
         return res.status(401).json({ message: 'Please verify your email first.' });
       }
 
-      // Return UID and Role for redirection
+      // Return UID, Role, and NEW FIELDS (Photo & Mobile)
       res.json({
         _id: user._id,
         uid: user.uid,
         name: user.name,
         email: user.email,
         role: user.role,
+        profilePicture: user.profilePicture || user.avatar, // Prefer uploaded photo
+        mobileNumber: user.mobileNumber,
+        isMobileVerified: user.isMobileVerified,
         token: generateToken(user._id),
       });
     } else {
@@ -172,8 +189,6 @@ const forgotPassword = async (req, res) => {
       res.status(200).json({ message: "OTP sent to your email" });
     } catch (err) {
       console.error("❌ Reset Password Email Failed:", err.message);
-      // Fallback: Don't fail the request, return OTP in dev mode or generic success
-      // In production, you might want to fail, but for now let's prevent hanging
       res.status(200).json({
         message: "Email failed to send. Check console for OTP (Dev Mode).",
         devOtp: otp
@@ -210,19 +225,39 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// @desc    Update User Profile
+// @desc    Update User Profile (Supports Photo Upload)
 // @route   PUT /api/auth/profile
 const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
 
     if (user) {
+      // 1. Update Text Fields
       user.name = req.body.name || user.name;
-      user.specialization = req.body.specialty || user.specialization; // Backend uses 'specialization'
+      user.specialization = req.body.specialty || user.specialization;
       user.phone = req.body.phone || user.phone;
       user.bio = req.body.bio || user.bio;
       user.clinicName = req.body.clinicName || user.clinicName;
       user.license = req.body.license || user.license;
+
+      // 2. Handle Image Upload to Cloudinary (If file exists)
+      if (req.file) {
+        const streamUpload = (fileBuffer) => {
+          return new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                  { folder: "clinique_patients" },
+                  (error, result) => {
+                      if (result) resolve(result);
+                      else reject(error);
+                  }
+              );
+              streamifier.createReadStream(fileBuffer).pipe(stream);
+          });
+        };
+
+        const result = await streamUpload(req.file.buffer);
+        user.profilePicture = result.secure_url; // Save the Cloudinary URL
+      }
 
       const updatedUser = await user.save();
 
@@ -237,17 +272,19 @@ const updateProfile = async (req, res) => {
         bio: updatedUser.bio,
         clinicName: updatedUser.clinicName,
         license: updatedUser.license,
+        profilePicture: updatedUser.profilePicture, // Return new photo
         token: generateToken(updatedUser._id),
       });
     } else {
       res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Update Password
+// @desc    Update Password (Simple)
 // @route   PUT /api/auth/password
 const updatePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
@@ -266,6 +303,59 @@ const updatePassword = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+// @desc    Request Password Change OTP
+// @route   POST /api/auth/request-password-otp
+const requestPasswordChangeOtp = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        user.verificationCode = otp;
+        user.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
+        await user.save();
+
+        await sendEmail({
+            to: user.email,
+            subject: 'Secure Password Change Code',
+            html: `<h1>Password Change Request</h1><p>Your Code: <strong>${otp}</strong></p>`
+        });
+
+        res.status(200).json({ message: "Verification code sent to email." });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to send code" });
+    }
+};
+
+// @desc    Verify OTP and Update Password (Secure)
+// @route   PUT /api/auth/update-password-secure
+const updatePasswordSecure = async (req, res) => {
+    const { currentPassword, newPassword, otp } = req.body;
+    try {
+        const user = await User.findById(req.user._id);
+        
+        // 1. Verify OTP
+        if (user.verificationCode !== otp || user.verificationCodeExpire < Date.now()) {
+            return res.status(400).json({ message: "Invalid or expired verification code" });
+        }
+
+        // 2. Verify Current Password
+        if (!(await bcrypt.compare(currentPassword, user.password))) {
+            return res.status(401).json({ message: 'Invalid current password' });
+        }
+
+        // 3. Update Password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        user.verificationCode = undefined;
+        user.verificationCodeExpire = undefined;
+        await user.save();
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };
 
 // @desc    Verify OTP for Login
@@ -381,9 +471,11 @@ const googleLogin = async (req, res) => {
   }
 };
 
-// @desc    Request OTP for Phone Change
+// @desc    Request OTP for Phone Change (SMS via Twilio)
 // @route   POST /api/auth/request-phone-otp
 const requestPhoneChangeOtp = async (req, res) => {
+  const { phoneNumber } = req.body; // New number to verify
+  
   try {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -391,38 +483,26 @@ const requestPhoneChangeOtp = async (req, res) => {
     // Generate 6-Digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Save OTP to user (reusing verificationCode fields or creating new ones)
-    // For simplicity, let's reuse verificationCode but context is important.
-    // Ideally use separate fields or a temp store, but here we'll use verificationCode
+    // Save OTP
     user.verificationCode = otp;
-    user.verificationCodeExpire = Date.now() + 10 * 60 * 1000; // 10 Minutes
+    user.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // Send Email
-    const message = `
-      <h1>Phone Number Update Request</h1>
-      <p>Your Verification Code is:</p>
-      <h2 style="color: blue;">${otp}</h2>
-      <p>Use this code to verify your new phone number.</p>
-    `;
-
-    // ALWAYS log OTP to console for development/testing
-    console.log(`📧 [DEV] Email OTP for ${user.email}: ${otp}`);
-
+    // Try Sending SMS via Twilio
     try {
-      await sendEmail({
-        to: user.email,
-        subject: 'CliniqueAI Phone Update Code',
-        html: message,
-      });
-      res.status(200).json({ message: "OTP sent to your email address." });
-    } catch (emailError) {
-      console.error("❌ EMAIL FAILED:", emailError.message);
-      // Fallback for dev/testing if email fails
-      res.status(200).json({
-        message: "Email failed. Check console for code (Dev Mode).",
-        devOtp: otp
-      });
+        await twilioClient.messages.create({
+            body: `CliniqueAI Verification Code: ${otp}`,
+            from: process.env.TWILIO_PHONE_NUMBER,
+            to: phoneNumber // Ensure frontend sends with country code (e.g. +1...)
+        });
+        res.status(200).json({ message: "SMS sent successfully." });
+    } catch (smsError) {
+        console.error("Twilio Error:", smsError);
+        // Fallback for Dev Mode or if Twilio fails (prevent UI hang)
+        res.status(200).json({ 
+            message: "SMS failed (Dev Mode). Check console.", 
+            devOtp: otp 
+        });
     }
   } catch (error) {
     res.status(500).json({ message: "Failed to generate OTP" });
@@ -430,34 +510,36 @@ const requestPhoneChangeOtp = async (req, res) => {
 };
 
 // @desc    Verify OTP and Update Phone
-// @route   PUT /api/auth/update-phone
+// @route   PUT /api/auth/verify-phone-update
 const verifyPhoneChangeOtp = async (req, res) => {
-  const { otp, newPhone } = req.body;
+  const { otp, phoneNumber } = req.body;
 
   try {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.verificationCode !== otp || user.verificationCodeExpire < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
+      return res.status(400).json({ message: "Invalid or expired SMS code" });
     }
 
     // Update Phone
-    user.phone = newPhone;
+    user.mobileNumber = phoneNumber; // Update verified number field
+    user.isMobileVerified = true;
+    
+    // Clear OTP
     user.verificationCode = undefined;
     user.verificationCodeExpire = undefined;
 
     // Also update linked PatientData if exists
-    // This fixes the sync issue where updating user didn't update patient records
     const PatientData = require('../models/PatientData');
     await PatientData.updateMany(
       { patient_id: user._id },
-      { $set: { phone: newPhone } } // Explicitly set phone field in PatientData
+      { $set: { phone: phoneNumber } }
     );
 
     await user.save();
 
-    res.status(200).json({ message: "Phone number updated successfully", phone: newPhone });
+    res.status(200).json({ message: "Phone number updated successfully", mobileNumber: phoneNumber });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -471,9 +553,11 @@ module.exports = {
   resetPassword,
   updateProfile,
   updatePassword,
+  updatePasswordSecure, // NEW EXPORT
   verifyLoginOTP,
   toggle2FA,
   googleLogin,
   requestPhoneChangeOtp,
+  requestPasswordChangeOtp, // NEW EXPORT
   verifyPhoneChangeOtp
 };
