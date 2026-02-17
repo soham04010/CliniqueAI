@@ -2,371 +2,610 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import {
+    ShieldCheck,
+    AlertTriangle,
+    CheckCircle,
+    Activity,
+    Share2,
+    TrendingUp,
+    Loader2,
+    Droplets,
+    Scale,
+    Heart
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  HeartPulse,
-  LogOut,
-  Activity,
-  CheckCircle,
-  AlertTriangle,
-  User,
-  Loader2,
-  RefreshCcw,
-  FileDown
-} from "lucide-react";
-import api from "@/lib/api";
-import ChatBox from "@/components/ChatBox";
 import ClinicalCoPilot from "@/components/ClinicalCoPilot";
-import { generatePatientReport } from "@/lib/generatePDF";
+import api from "@/lib/api";
+import { getHumanStatus, getDeltas } from "@/lib/patientLogic";
+import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function PatientDashboard() {
-  const router = useRouter();
-  const [userName, setUserName] = useState("");
-  const [records, setRecords] = useState<any[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isCheckOpen, setIsCheckOpen] = useState(false);
-  const [checking, setChecking] = useState(false);
+    const router = useRouter();
+    const [patient, setPatient] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-  // Get user info from localStorage safely
-  const [user, setUser] = useState<any>({});
+    // Computed States
+    const [status, setStatus] = useState<any>(null);
+    const [deltas, setDeltas] = useState<any[]>([]);
 
-  const [form, setForm] = useState({
-    gender: "Female",
-    age: "",
-    hypertension: "0",
-    heart_disease: "0",
-    smoking_history: "never",
-    bmi: "",
-    HbA1c_level: "",
-    blood_glucose_level: "",
-    doctor_id: ""
-  });
+    // Vitals Form State
+    const [isVitalsOpen, setIsVitalsOpen] = useState(false);
+    const [vitalsForm, setVitalsForm] = useState({
+        age: '',
+        gender: 'Male',
+        smoking_history: 'never',
+        hypertension: '0',
+        heart_disease: '0',
+        glucose: '',
+        hba1c: '',
+        bmi: ''
+    });
 
-  useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (!userStr) { router.push("/login"); return; }
+    const handleUpdateVitals = async () => {
+        setLoading(true);
+        try {
+            // 1. One-Hot Encode Smoking History
+            const smokingMap: any = {
+                "current": "smoking_history_current",
+                "former": "smoking_history_former",
+                "never": "smoking_history_never",
+                "No Info": "smoking_history_not current",
+                "ever": "smoking_history_ever"
+            };
 
-    try {
-      const parsedUser = JSON.parse(userStr);
-      if (parsedUser.role !== "patient") { router.push("/login"); return; }
-      setUser(parsedUser);
-      setUserName(parsedUser.name);
+            const smokingState = vitalsForm.smoking_history; // current selection
+            const smokingPayload = {
+                "smoking_history_current": 0,
+                "smoking_history_ever": 0,
+                "smoking_history_former": 0,
+                "smoking_history_never": 0,
+                "smoking_history_not current": 0
+            };
 
-      const loadData = async () => {
-        await fetchMyRecords();
-        await fetchDoctors();
-        setLoading(false);
-      };
-      loadData();
-    } catch (e) {
-      router.push("/login");
-    }
-  }, []);
+            if (smokingMap[smokingState]) {
+                // @ts-ignore
+                smokingPayload[smokingMap[smokingState]] = 1;
+            }
 
-  // PERSISTENCE: Auto-fill form with static values from previous history
-  useEffect(() => {
-    if (records.length > 0) {
-      const last = records[0].inputs;
-      setForm(prev => ({
-        ...prev,
-        gender: last.gender,
-        age: last.age.toString(),
-        smoking_history: last.smoking_history,
-        hypertension: last.hypertension.toString(),
-        heart_disease: last.heart_disease.toString(),
-        doctor_id: records[0].doctor_id || ""
-      }));
-    }
-  }, [records]);
+            // 2. Prepare Payload
+            const newInputs = {
+                ...(patient.inputs || {}),
+                gender: vitalsForm.gender === 'Male' ? 1 : 0, // Male=1, Female=0
+                age: Number(vitalsForm.age),
+                hypertension: Number(vitalsForm.hypertension),
+                heart_disease: Number(vitalsForm.heart_disease),
+                bmi: Number(vitalsForm.bmi),
+                HbA1c_level: Number(vitalsForm.hba1c),
+                blood_glucose_level: Number(vitalsForm.glucose),
+                ...smokingPayload
+            };
 
-  const fetchDoctors = async () => {
-    try {
-      const { data } = await api.get('/auth/doctors');
-      setDoctors(data);
-    } catch (e) {
-      console.log("Error loading doctors");
-    }
-  };
+            // Remove legacy field if it exists to avoid backend validation errors
+            // @ts-ignore
+            delete newInputs.smoking_history;
 
-  const fetchMyRecords = async () => {
-    try {
-      const { data } = await api.get('/patients');
-      setRecords(data);
-    } catch (e) {
-      console.log("Error fetching records");
-    }
-  };
+            const { data: newRecord } = await api.post('/patients/predict', {
+                name: patient.name,
+                inputs: newInputs,
+                doctor_id: patient.doctor_id
+            });
 
-  const handleSelfCheck = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setChecking(true);
+            setPatient({ ...patient, ...newRecord });
 
-    const payload = {
-      name: userName,
-      doctor_id: form.doctor_id,
-      inputs: {
-        gender: form.gender,
-        age: Number(form.age),
-        hypertension: Number(form.hypertension),
-        heart_disease: Number(form.heart_disease),
-        smoking_history: form.smoking_history,
-        bmi: Number(form.bmi),
-        HbA1c_level: Number(form.HbA1c_level),
-        blood_glucose_level: Number(form.blood_glucose_level)
-      }
+            if (newRecord.prediction) {
+                setStatus(getHumanStatus(newRecord.prediction.riskScore));
+            }
+
+            try {
+                const { data: hist } = await api.get(`/patients/history/${encodeURIComponent(patient.name)}`);
+                setDeltas(getDeltas(newInputs, hist));
+            } catch (e) {
+                console.warn("History refresh failed", e);
+            }
+
+            toast.success("Analysis Complete & Shared", {
+                description: `Results sent to ${patient?.doctor_id || 'your doctor'}. Risk Score: ${newRecord.prediction.riskScore.toFixed(4)}%`
+            });
+            setIsVitalsOpen(false);
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Analysis Failed");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    try {
-      await api.post('/patients/predict', payload);
-      await fetchMyRecords();
-      setIsCheckOpen(false);
-    } catch (err) {
-      alert("Check failed. Ensure the AI and Backend servers are active.");
-    } finally {
-      setChecking(false);
-    }
-  };
+    useEffect(() => {
+        const fetchData = async () => {
+            const userStr = localStorage.getItem("user");
+            const token = localStorage.getItem("token");
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-      <Loader2 className="animate-spin h-8 w-8 text-teal-500" />
-    </div>
-  );
+            if (!userStr || !token) {
+                router.push("/login");
+                return;
+            }
 
-  const hasHistory = records.length > 0;
-  const latestRecord = records[0];
+            try {
+                const localUser = JSON.parse(userStr);
+                const { data: records } = await api.get(`/patients`);
+                let fullPatient = localUser;
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-white p-6">
-      {/* Navbar Header */}
-      <div className="flex justify-between items-center mb-8 bg-slate-900/50 p-4 rounded-2xl border border-slate-800 backdrop-blur-md">
-        <div>
-          <h1 className="text-2xl font-bold text-teal-400 italic tracking-tight">CliniqueAI</h1>
-          <p className="text-slate-400 text-sm font-medium">Patient Dashboard: {userName}</p>
+                if (records && records.length > 0) {
+                    fullPatient = { ...localUser, ...records[0] };
+                    setPatient(fullPatient);
+
+                    // Initialize form with current values
+                    if (fullPatient.inputs) {
+                        setVitalsForm({
+                            age: fullPatient.inputs.age || '',
+                            gender: fullPatient.inputs.gender === 1 ? 'Male' : (fullPatient.inputs.gender === 0 ? 'Female' : 'Male'),
+
+                            // Reconstruct smoking status from one-hot
+                            smoking_history:
+                                fullPatient.inputs.smoking_history_current ? 'current' :
+                                    fullPatient.inputs.smoking_history_former ? 'former' :
+                                        fullPatient.inputs.smoking_history_never ? 'never' :
+                                            fullPatient.inputs["smoking_history_not current"] ? 'No Info' : 'never',
+
+                            hypertension: String(fullPatient.inputs.hypertension || '0'),
+                            heart_disease: String(fullPatient.inputs.heart_disease || '0'),
+                            glucose: fullPatient.inputs.blood_glucose_level || '',
+                            hba1c: fullPatient.inputs.HbA1c_level || '',
+                            bmi: fullPatient.inputs.bmi || ''
+                        });
+                    }
+
+                    if (fullPatient.prediction) {
+                        setStatus(getHumanStatus(fullPatient.prediction.riskScore));
+                    }
+
+                    try {
+                        const { data: hist } = await api.get(`/patients/history/${encodeURIComponent(fullPatient.name)}`);
+                        setDeltas(getDeltas(fullPatient.inputs, hist));
+                    } catch (err) {
+                        console.warn("Could not fetch history for trends.");
+                    }
+
+                } else {
+                    setPatient(localUser);
+                    setStatus({
+                        status: "Welcome to CliniqueAI",
+                        color: "bg-indigo-50 text-indigo-800",
+                        iconColor: "text-indigo-600",
+                        message: "We don't have enough data yet. Schedule a checkup to get started.",
+                        level: "info"
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch dashboard data", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [router]);
+
+    const handleShare = (metric: string, value: any) => {
+        // In a real app, this would make an API call to notify the doctor
+        toast.success(`${metric} results shared with your doctor!`, {
+            description: `Dr. Panel has been notified of your ${value} value.`
+        });
+    };
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+            <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
         </div>
-        <Button variant="ghost" onClick={() => { localStorage.clear(); router.push('/login'); }} className="text-slate-400 hover:text-red-500">
-          <LogOut className="h-5 w-5" />
-        </Button>
-      </div>
+    );
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          {/* LATEST STATUS CARD */}
-          <Card className="bg-slate-900 border-slate-800 text-white shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 to-blue-500"></div>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xs uppercase tracking-widest text-slate-500 font-black">Latest Medical Assessment</CardTitle>
-              {latestRecord && (
-                <Button
-                  onClick={() => generatePatientReport(latestRecord)}
-                  size="sm"
-                  variant="outline"
-                  className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 h-8 text-[10px] font-black uppercase"
-                >
-                  <FileDown className="mr-1 h-3 w-3" /> Get Report PDF
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent className="flex flex-col items-center py-10">
-              {latestRecord ? (
-                <div className="text-center animate-in fade-in zoom-in duration-500 w-full">
-                  {/* HIGH PRECISION SCORE */}
-                  <div className={`text-7xl font-black mb-2 tracking-tighter ${latestRecord.prediction.riskLevel === 'High' ? 'text-red-500' : 'text-emerald-400'}`}>
-                    {latestRecord.prediction.riskScore.toFixed(4)}%
-                  </div>
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">
-                    {latestRecord.prediction.riskLevel} Clinical Risk
-                  </p>
+    return (
+        <div className="font-sans text-slate-900 pb-20">
 
-                  <div className="grid grid-cols-3 gap-6 w-full max-w-lg mx-auto">
-                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
-                      <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Glucose</p>
-                      <p className="text-2xl font-bold text-blue-400 font-mono">{latestRecord.inputs.blood_glucose_level}</p>
+            <main className="max-w-5xl mx-auto px-6 py-8 space-y-8 animate-in fade-in duration-500">
+
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Good Morning, {patient?.name?.split(' ')[0] || 'Patient'}</h1>
+                        <p className="text-slate-500">Here is your health overview for today.</p>
                     </div>
-                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
-                      <p className="text-[10px] text-slate-500 uppercase font-black mb-1">HbA1c</p>
-                      <p className="text-2xl font-bold text-purple-400 font-mono">{latestRecord.inputs.HbA1c_level}</p>
-                    </div>
-                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
-                      <p className="text-[10px] text-slate-500 uppercase font-black mb-1">BMI</p>
-                      <p className="text-2xl font-bold text-orange-400 font-mono">{latestRecord.inputs.bmi}</p>
-                    </div>
-                  </div>
+
+                    {/* Routine Vital Check Modal */}
+                    <Dialog open={isVitalsOpen} onOpenChange={setIsVitalsOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 rounded-xl px-6 font-bold tracking-wide transition-all hover:scale-105 active:scale-95">
+                                <Activity className="h-4 w-4 mr-2" />
+                                ROUTINE VITAL CHECK
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[480px] rounded-[2rem] bg-white text-slate-900 border-slate-100 shadow-2xl shadow-indigo-900/10 p-0 overflow-hidden">
+                            <DialogTitle className="sr-only">Routine Vital Check</DialogTitle>
+
+
+                            <div className="p-6 space-y-6">
+                                {/* Physician Info */}
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consulting Physician</Label>
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                            DR
+                                        </div>
+                                        <div className="text-sm font-semibold text-slate-700">
+                                            {patient?.doctor_id || 'Dr. Assigned Panel'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Personal Stats Grid */}
+                                <div className="grid grid-cols-2 gap-5">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="age" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Age</Label>
+                                        <div className="flex items-center justify-between bg-white p-1 rounded-2xl border border-slate-200 shadow-sm h-14">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => setVitalsForm(prev => ({ ...prev, age: String(Math.max(0, Number(prev.age) - 1)) }))}
+                                                className="h-12 w-14 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                            >
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </Button>
+
+                                            <div className="flex flex-col items-center justify-center -space-y-0.5 px-2">
+                                                <input
+                                                    id="age"
+                                                    type="number"
+                                                    value={vitalsForm.age}
+                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, age: e.target.value })}
+                                                    className="bg-transparent border-none text-center text-xl font-black text-slate-900 focus:outline-none focus:ring-0 p-0 h-7 w-20 [&::-webkit-inner-spin-button]:appearance-none"
+                                                    placeholder="--"
+                                                />
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Years</span>
+                                            </div>
+
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => setVitalsForm(prev => ({ ...prev, age: String(Number(prev.age) + 1) }))}
+                                                className="h-12 w-14 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                            >
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="gender" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Gender</Label>
+                                        <div className="relative">
+                                            <select
+                                                id="gender"
+                                                value={vitalsForm.gender}
+                                                onChange={(e) => setVitalsForm({ ...vitalsForm, gender: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 text-slate-900 rounded-2xl px-4 h-14 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none text-sm font-bold appearance-none cursor-pointer hover:bg-slate-50 transition-colors shadow-sm"
+                                            >
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Smoking History */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="smoking" className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Smoking History</Label>
+                                    <div className="relative">
+                                        <select
+                                            id="smoking"
+                                            value={vitalsForm.smoking_history}
+                                            onChange={(e) => setVitalsForm({ ...vitalsForm, smoking_history: e.target.value })}
+                                            className="w-full bg-white border border-slate-200 text-slate-900 rounded-xl px-4 h-11 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none text-sm appearance-none cursor-pointer hover:bg-slate-50 transition-colors shadow-sm font-medium"
+                                        >
+                                            <option value="never">Never Smoked</option>
+                                            <option value="current">Current Smoker</option>
+                                            <option value="former">Former Smoker</option>
+                                            <option value="No Info">No Information</option>
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Binary Toggles */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-center mb-2">Hypertension</Label>
+                                        <div className="flex bg-slate-200/50 rounded-lg p-1">
+                                            <button
+                                                onClick={() => setVitalsForm({ ...vitalsForm, hypertension: '0' })}
+                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.hypertension === '0' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                            >
+                                                NO
+                                            </button>
+                                            <button
+                                                onClick={() => setVitalsForm({ ...vitalsForm, hypertension: '1' })}
+                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.hypertension === '1' ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                                            >
+                                                YES
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-center mb-2">Heart Disease</Label>
+                                        <div className="flex bg-slate-200/50 rounded-lg p-1">
+                                            <button
+                                                onClick={() => setVitalsForm({ ...vitalsForm, heart_disease: '0' })}
+                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.heart_disease === '0' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                            >
+                                                NO
+                                            </button>
+                                            <button
+                                                onClick={() => setVitalsForm({ ...vitalsForm, heart_disease: '1' })}
+                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.heart_disease === '1' ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                                            >
+                                                YES
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Vitals Inputs */}
+                                <div className="space-y-4 pt-4 border-t border-slate-100">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="glucose" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">Glucose</Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="glucose"
+                                                    type="number"
+                                                    value={vitalsForm.glucose}
+                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, glucose: e.target.value })}
+                                                    className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-12 font-bold shadow-sm"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">mg/dL</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="hba1c" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">HbA1c</Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="hba1c"
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={vitalsForm.hba1c}
+                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, hba1c: e.target.value })}
+                                                    className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-8 font-bold shadow-sm"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bmi" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">BMI Index</Label>
+                                        <div className="relative">
+                                            <Input
+                                                id="bmi"
+                                                type="number"
+                                                step="0.1"
+                                                value={vitalsForm.bmi}
+                                                onChange={(e) => setVitalsForm({ ...vitalsForm, bmi: e.target.value })}
+                                                className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-12 font-bold shadow-sm"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">kg/m²</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 pt-2 bg-slate-50/50">
+                                <Button
+                                    onClick={handleUpdateVitals}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold tracking-widest h-12 text-sm rounded-xl shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    EXECUTE AI ANALYSIS
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
-              ) : (
-                <div className="py-20 text-slate-500 italic text-center">
-                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p>No health records established yet. Proceed to AI analysis.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* CHAT INTEGRATION */}
-          {latestRecord?.doctor_id ? (
-            <div className="animate-in slide-in-from-bottom-4 duration-700">
-              <ChatBox
-                senderId={user.id || user._id}
-                senderName={user.name}
-                receiverId={latestRecord.doctor_id}
-                receiverName="Assigned Physician"
-              />
-            </div>
-          ) : (
-            <div className="p-10 bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-800 text-center flex flex-col items-center gap-2">
-              <User className="h-8 w-8 text-slate-700" />
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Consultation Disabled</p>
-              <p className="text-[10px] text-slate-600">Select a doctor during your next update to enable secure messaging.</p>
-            </div>
-          )}
+                {/* 1. Hero: "Am I Okay?" */}
+                {status && (
+                    <div className={`relative overflow-hidden p-8 rounded-[2rem] shadow-sm border transition-all duration-300 group
+                      ${status.level === 'low' ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100/50' :
+                            status.level === 'high' ? 'bg-gradient-to-br from-rose-50 to-orange-50 border-rose-100/50' :
+                                'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100/50'}`}>
+
+                        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                            <div className="space-y-3">
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/50 backdrop-blur-sm
+                               ${status.level === 'low' ? 'bg-emerald-100/80 text-emerald-800' :
+                                        status.level === 'high' ? 'bg-rose-100/80 text-rose-800' : 'bg-amber-100/80 text-amber-800'}`}>
+                                    {status.level === 'low' ? <ShieldCheck className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                    Current Status
+                                </span>
+                                <div>
+                                    <div className="flex items-baseline gap-3">
+                                        <h2 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
+                                            {patient.prediction?.riskScore ? `${patient.prediction.riskScore.toFixed(4)}%` : '--'}
+                                        </h2>
+                                        <span className="text-xl font-bold text-slate-400 uppercase tracking-widest">{status.level} RISK</span>
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-slate-700 mt-1">{status.status}</h3>
+                                </div>
+                                <p className="text-base font-medium text-slate-600/90 leading-relaxed max-w-lg">
+                                    {status.message}
+                                </p>
+                            </div>
+
+                            <div className={`hidden md:flex h-20 w-20 rounded-full border-4 items-center justify-center bg-white shadow-sm
+                            ${status.level === 'low' ? 'border-emerald-100 text-emerald-500' :
+                                    status.level === 'high' ? 'border-rose-100 text-rose-500' : 'border-amber-100 text-amber-500'}`}>
+                                {status.level === 'low' ? <CheckCircle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 2. My Vitals Section (Real Data & Share) */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-indigo-600" />
+                            My Vitals
+                        </h2>
+                        <Link href="/patient/history" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-4 transition-all">
+                            View All History
+                        </Link>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {/* Glucose Card */}
+                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="bg-blue-50 p-2.5 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                        <Droplets className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Glucose</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.blood_glucose_level || '--'}</h3>
+                                        <span className="text-sm font-semibold text-slate-400">mg/dL</span>
+                                    </div>
+                                </div>
+                                {patient?.inputs?.blood_glucose_level && (
+                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.blood_glucose_level > 140 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {patient.inputs.blood_glucose_level > 140 ? 'High' : 'Normal'}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* HbA1c Card */}
+                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="bg-purple-50 p-2.5 rounded-xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                        <Activity className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">HbA1c</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.HbA1c_level || '--'}</h3>
+                                        <span className="text-sm font-semibold text-slate-400">%</span>
+                                    </div>
+                                </div>
+                                {patient?.inputs?.HbA1c_level && (
+                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.HbA1c_level > 6.5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {patient.inputs.HbA1c_level > 6.5 ? 'Elevated' : 'Normal'}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* BMI Card */}
+                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="bg-orange-50 p-2.5 rounded-xl text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                        <Scale className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">BMI</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.bmi || '--'}</h3>
+                                        <span className="text-sm font-semibold text-slate-400">kg/m²</span>
+                                    </div>
+                                </div>
+                                {patient?.inputs?.bmi && (
+                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.bmi > 25 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {patient.inputs.bmi > 25 ? 'Overweight' : 'Normal'}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* 3. Trends & Safety (Right Column) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Trends List */}
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-slate-400" />
+                                Recent Changes
+                            </h3>
+                        </div>
+                        <div className="divide-y divide-slate-50">
+                            {deltas.length > 0 ? (
+                                deltas.map((delta: any, i: number) => (
+                                    <div key={i} className="p-6 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
+                                        <div className={`p-2.5 rounded-2xl flex-none shadow-sm ${delta.positive ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                            <TrendingUp className={`h-5 w-5 ${delta.positive ? 'rotate-0' : 'rotate-180'}`} />
+                                        </div>
+                                        <p className="text-sm font-semibold text-slate-700 leading-snug">{delta.text}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-8 text-center text-slate-400 text-sm">No recent changes detected.</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Safety Banner */}
+                    <div className="bg-slate-900 rounded-[2rem] p-8 shadow-xl shadow-slate-200 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                        <div className="relative z-10">
+                            <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                                <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                                Should I be worried?
+                            </h3>
+                            <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                                You are not in immediate danger. Your risk level is manageable.
+                            </p>
+                            <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10">
+                                <p className="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Doctor Alert</p>
+                                <p className="text-slate-200 text-sm font-medium">
+                                    If glucose &gt; 180 mg/dL for 3 days.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <ClinicalCoPilot patientContext={patient} />
+            </main>
         </div>
-
-        {/* SIDEBAR ACTIONS */}
-        <div className="space-y-6">
-          <Card className="bg-slate-900 border-slate-800 text-white shadow-xl border-t-4 border-t-blue-600">
-            <CardHeader><CardTitle className="text-xs uppercase font-black tracking-widest text-slate-400">Clinical Actions</CardTitle></CardHeader>
-            <CardContent>
-              <Dialog open={isCheckOpen} onOpenChange={setIsCheckOpen}>
-                <DialogTrigger asChild>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 h-16 text-lg font-black tracking-tighter shadow-lg shadow-blue-500/20">
-                    <HeartPulse className="mr-2 h-6 w-6" /> {hasHistory ? "UPDATE VITALS" : "RUN AI ANALYSIS"}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-[550px] max-h-[90vh] overflow-y-auto shadow-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-black italic">{hasHistory ? "Routine Vital Check" : "AI Health Onboarding"}</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSelfCheck} className="grid grid-cols-2 gap-4 py-4">
-
-                    <div className="col-span-2 space-y-2">
-                      <Label className="text-[10px] text-blue-400 font-black uppercase tracking-widest">Consulting Physician</Label>
-                      <Select onValueChange={(v) => setForm({ ...form, doctor_id: v })} defaultValue={form.doctor_id}>
-                        <SelectTrigger className="bg-slate-800 border-slate-700 h-12">
-                          <SelectValue placeholder="Select Doctor to share results" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                          {doctors.map((doc: any) => (
-                            <SelectItem key={doc._id} value={doc._id}>{doc.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-slate-400 font-bold uppercase">Age</Label>
-                      <Input type="number" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} className="bg-slate-800 border-slate-700" required />
-                    </div>
-
-                    {!hasHistory && (
-                      <>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-slate-400 font-bold uppercase">Gender</Label>
-                          <Select onValueChange={(v) => setForm({ ...form, gender: v })} defaultValue={form.gender}>
-                            <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-slate-800 text-white">
-                              <SelectItem value="Female">Female</SelectItem>
-                              <SelectItem value="Male">Male</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-slate-400 font-bold uppercase">Smoking</Label>
-                          <Select onValueChange={v => setForm({ ...form, smoking_history: v })} defaultValue={form.smoking_history}>
-                            <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-slate-800 text-white">
-                              <SelectItem value="never">Never</SelectItem>
-                              <SelectItem value="current">Current</SelectItem>
-                              <SelectItem value="former">Former</SelectItem>
-                              <SelectItem value="No Info">No Info</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-slate-400 font-bold uppercase">Hypertension</Label>
-                          <Select onValueChange={v => setForm({ ...form, hypertension: v })} defaultValue={form.hypertension}>
-                            <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-slate-800 text-white"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-slate-400 font-bold uppercase">Heart Disease</Label>
-                          <Select onValueChange={v => setForm({ ...form, heart_disease: v })} defaultValue={form.heart_disease}>
-                            <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-slate-800 text-white"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
-                          </Select>
-                        </div>
-                      </>
-                    )}
-
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-teal-400 font-black uppercase">Glucose (mg/dL)</Label>
-                      <Input type="number" onChange={e => setForm({ ...form, blood_glucose_level: e.target.value })} className="bg-slate-800 border-teal-900/50" required />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-teal-400 font-black uppercase">HbA1c (%)</Label>
-                      <Input type="number" step="0.1" onChange={e => setForm({ ...form, HbA1c_level: e.target.value })} className="bg-slate-800 border-teal-900/50" required />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-teal-400 font-black uppercase">BMI Index</Label>
-                      <Input type="number" step="0.1" onChange={e => setForm({ ...form, bmi: e.target.value })} className="bg-slate-800 border-teal-900/50" required />
-                    </div>
-
-                    <div className="col-span-2 mt-4">
-                      <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-500 h-14 font-black tracking-widest border-b-4 border-teal-800 active:border-b-0 active:translate-y-1 transition-all" disabled={checking}>
-                        {checking ? <Loader2 className="animate-spin mr-2" /> : "EXECUTE AI ANALYSIS"}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </CardContent>
-          </Card>
-
-          {/* ANALYSIS HISTORY LIST */}
-          <Card className="bg-slate-900 border-slate-800 text-white flex-1 overflow-hidden shadow-xl border-t-4 border-t-emerald-600">
-            <CardHeader className="p-4 border-b border-slate-800 flex flex-row justify-between items-center">
-              <CardTitle className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Longitudinal History</CardTitle>
-              <RefreshCcw className="h-3 w-3 text-slate-500 cursor-pointer hover:rotate-180 transition-transform duration-500" onClick={fetchMyRecords} />
-            </CardHeader>
-            <CardContent className="p-0 max-h-[350px] overflow-y-auto">
-              {records.map((r, i) => (
-                <div key={i} className="flex justify-between items-center p-4 border-b border-slate-800 hover:bg-slate-800/20 transition-all group">
-                  <div>
-                    <p className="text-[10px] text-slate-500 font-mono group-hover:text-teal-500">{new Date(r.createdAt).toLocaleDateString()}</p>
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-tighter italic">Trial #{records.length - i}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-black ${r.prediction.riskLevel === 'High' ? 'text-red-400' : 'text-emerald-400'}`}>
-                      {r.prediction.riskScore.toFixed(2)}%
-                    </p>
-                    <p className="text-[8px] uppercase font-black text-slate-600 tracking-widest">{r.prediction.riskLevel} Risk</p>
-                  </div>
-                </div>
-              ))}
-              {records.length === 0 && <p className="p-10 text-center text-[10px] text-slate-600 uppercase font-bold">Waiting for primary data...</p>}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Patient AI Co-Pilot */}
-      {latestRecord && (
-        <ClinicalCoPilot
-          patientContext={{
-            _id: user.id || user._id, // Patient's own ID
-            name: user.name,
-            prediction: latestRecord.prediction,
-            inputs: latestRecord.inputs,
-            history: records
-          }}
-        />
-      )}
-    </div>
-  );
+    );
 }

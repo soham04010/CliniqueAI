@@ -1,31 +1,45 @@
 "use client";
+
+import { useState, useEffect } from "react";
+import Sidebar from "@/components/doctor/Sidebar";
+import Header from "@/components/doctor/Header";
 import ChatBox from "@/components/ChatBox";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 export default function DoctorInboxPage() {
-  const router = useRouter();
+  const [doctorName, setDoctorName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setDoctorName(user.name);
+    }
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            onClick={() => router.push('/doctor/dashboard')} 
-            className="text-slate-400 hover:text-white"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-          </Button>
-          <h1 className="text-xl font-bold text-white">Patient Consultation Inbox</h1>
+    <div className="min-h-screen bg-[#F1F5F9] text-slate-900 font-sans flex text-sm selection:bg-teal-100 selection:text-teal-900">
+
+      {/* 1. SIDEBAR */}
+      <Sidebar />
+
+      {/* 2. MAIN AREA */}
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+
+        {/* HEADER */}
+        <Header
+          doctorName={doctorName}
+          title="Inbox"
+          subtitle="Patient consultations & internal messaging"
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+        />
+
+        {/* INBOX CONTENT (Real ChatBox) */}
+        <div className="flex-1 overflow-hidden p-6">
+          <ChatBox searchQuery={searchQuery} />
         </div>
-        
-        {/* Full-screen Chat Interface */}
-        <div className="h-[700px]">
-          <ChatBox />
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
