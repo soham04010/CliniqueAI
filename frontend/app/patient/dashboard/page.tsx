@@ -55,6 +55,7 @@ export default function PatientDashboard() {
         bmi: '',
         doctor_email: ''
     });
+    const [doctorName, setDoctorName] = useState<string | null>(null);
 
     const handleUpdateVitals = async () => {
         setLoading(true);
@@ -152,20 +153,15 @@ export default function PatientDashboard() {
                     setPatient(fullPatient);
 
                     // Fetch Doctor Details if linked
-                    let currentDoctorEmail = '';
                     if (fullPatient.doctor_id) {
                         try {
-                            // We need a way to get user details. Assuming /auth/user/:id exists or using a specialized route.
-                            // Since we don't have a direct public route for this, we might need to rely on what we have.
-                            // OR, simpler: We check if the backend can return doctor email in the predict/history response?
-                            // For now, let's try to fetch from a public profile endpoint if it exists, or skip.
-                            // Actually, let's fallback to empty string if we can't easily get it, 
-                            // BUT consistent UX requires it.
-                            // Let's assume the user has to re-enter it, OR we store it in local storage?
-                            // Better: Let's fetch it via a new specific helper if possible.
-                            // Checking API...
-                            // If not available, we leave it blank.
-                        } catch (err) { console.warn("Doctor fetch error", err); }
+                            const { data: doctorData } = await api.get(`/auth/user/${fullPatient.doctor_id}`);
+                            if (doctorData && doctorData.name) {
+                                setDoctorName(doctorData.name);
+                            }
+                        } catch (err) {
+                            console.warn("Doctor fetch error", err);
+                        }
                     }
 
                     // Initialize form with current values
@@ -256,7 +252,7 @@ export default function PatientDashboard() {
                             </div>
                             <div className="text-xs">
                                 <p className="font-bold uppercase tracking-wider opacity-70">Care Team</p>
-                                <p className="font-semibold">{vitalsForm.doctor_email ? 'Dr. Assigned' : 'No Doctor'}</p>
+                                <p className="font-semibold">{doctorName || (vitalsForm.doctor_email ? 'Dr. Assigned' : 'No Doctor')}</p>
                             </div>
                         </div>
 
@@ -475,181 +471,181 @@ export default function PatientDashboard() {
                             </DialogContent>
                         </Dialog>
                     </div>
+                </div>
 
-                    {/* 1. Hero: "Am I Okay?" */}
-                    {
-                        status && (
-                            <div className={`relative overflow-hidden p-8 rounded-[2rem] shadow-sm border transition-all duration-300 group
+                {/* 1. Hero: "Am I Okay?" */}
+                {
+                    status && (
+                        <div className={`relative overflow-hidden p-8 rounded-[2rem] shadow-sm border transition-all duration-300 group
                       ${status.level === 'low' ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100/50' :
-                                    status.level === 'high' ? 'bg-gradient-to-br from-rose-50 to-orange-50 border-rose-100/50' :
-                                        'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100/50'}`}>
+                                status.level === 'high' ? 'bg-gradient-to-br from-rose-50 to-orange-50 border-rose-100/50' :
+                                    'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100/50'}`}>
 
-                                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                                    <div className="space-y-3">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/50 backdrop-blur-sm
+                            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                <div className="space-y-3">
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/50 backdrop-blur-sm
                                ${status.level === 'low' ? 'bg-emerald-100/80 text-emerald-800' :
-                                                status.level === 'high' ? 'bg-rose-100/80 text-rose-800' : 'bg-amber-100/80 text-amber-800'}`}>
-                                            {status.level === 'low' ? <ShieldCheck className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                                            Current Status
-                                        </span>
-                                        <div>
-                                            <div className="flex items-baseline gap-3">
-                                                <h2 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
-                                                    {patient.prediction?.riskScore ? `${patient.prediction.riskScore.toFixed(4)}%` : '--'}
-                                                </h2>
-                                                <span className="text-xl font-bold text-slate-400 uppercase tracking-widest">{status.level} RISK</span>
-                                            </div>
-                                            <h3 className="text-lg font-semibold text-slate-700 mt-1">{status.status}</h3>
-                                        </div>
-                                        <p className="text-base font-medium text-slate-600/90 leading-relaxed max-w-lg">
-                                            {status.message}
-                                        </p>
-                                    </div>
-
-                                    <div className={`hidden md:flex h-20 w-20 rounded-full border-4 items-center justify-center bg-white shadow-sm
-                            ${status.level === 'low' ? 'border-emerald-100 text-emerald-500' :
-                                            status.level === 'high' ? 'border-rose-100 text-rose-500' : 'border-amber-100 text-amber-500'}`}>
-                                        {status.level === 'low' ? <CheckCircle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    }
-
-                    {/* 2. My Vitals Section (Real Data & Share) */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-1">
-                            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                <Activity className="h-5 w-5 text-indigo-600" />
-                                My Vitals
-                            </h2>
-                            <Link href="/patient/history" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-4 transition-all">
-                                View All History
-                            </Link>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                            {/* Glucose Card */}
-                            <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                                <CardContent className="p-6 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="bg-blue-50 p-2.5 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                            <Droplets className="h-5 w-5" />
-                                        </div>
-                                    </div>
+                                            status.level === 'high' ? 'bg-rose-100/80 text-rose-800' : 'bg-amber-100/80 text-amber-800'}`}>
+                                        {status.level === 'low' ? <ShieldCheck className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                        Current Status
+                                    </span>
                                     <div>
-                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Glucose</p>
-                                        <div className="flex items-baseline gap-1 mt-1">
-                                            <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.blood_glucose_level || '--'}</h3>
-                                            <span className="text-sm font-semibold text-slate-400">mg/dL</span>
+                                        <div className="flex items-baseline gap-3">
+                                            <h2 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
+                                                {patient.prediction?.riskScore ? `${patient.prediction.riskScore.toFixed(4)}%` : '--'}
+                                            </h2>
+                                            <span className="text-xl font-bold text-slate-400 uppercase tracking-widest">{status.level} RISK</span>
                                         </div>
+                                        <h3 className="text-lg font-semibold text-slate-700 mt-1">{status.status}</h3>
                                     </div>
-                                    {patient?.inputs?.blood_glucose_level && (
-                                        <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.blood_glucose_level > 140 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                            {patient.inputs.blood_glucose_level > 140 ? 'High' : 'Normal'}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            {/* HbA1c Card */}
-                            <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                                <CardContent className="p-6 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="bg-purple-50 p-2.5 rounded-xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                                            <Activity className="h-5 w-5" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">HbA1c</p>
-                                        <div className="flex items-baseline gap-1 mt-1">
-                                            <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.HbA1c_level || '--'}</h3>
-                                            <span className="text-sm font-semibold text-slate-400">%</span>
-                                        </div>
-                                    </div>
-                                    {patient?.inputs?.HbA1c_level && (
-                                        <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.HbA1c_level > 6.5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                            {patient.inputs.HbA1c_level > 6.5 ? 'Elevated' : 'Normal'}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            {/* BMI Card */}
-                            <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                                <CardContent className="p-6 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="bg-orange-50 p-2.5 rounded-xl text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
-                                            <Scale className="h-5 w-5" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">BMI</p>
-                                        <div className="flex items-baseline gap-1 mt-1">
-                                            <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.bmi || '--'}</h3>
-                                            <span className="text-sm font-semibold text-slate-400">kg/m²</span>
-                                        </div>
-                                    </div>
-                                    {patient?.inputs?.bmi && (
-                                        <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.bmi > 25 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                            {patient.inputs.bmi > 25 ? 'Overweight' : 'Normal'}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-
-                    {/* 3. Trends & Safety (Right Column) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Trends List */}
-                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-                            <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <TrendingUp className="h-4 w-4 text-slate-400" />
-                                    Recent Changes
-                                </h3>
-                            </div>
-                            <div className="divide-y divide-slate-50">
-                                {deltas.length > 0 ? (
-                                    deltas.map((delta: any, i: number) => (
-                                        <div key={i} className="p-6 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
-                                            <div className={`p-2.5 rounded-2xl flex-none shadow-sm ${delta.positive ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                                                <TrendingUp className={`h-5 w-5 ${delta.positive ? 'rotate-0' : 'rotate-180'}`} />
-                                            </div>
-                                            <p className="text-sm font-semibold text-slate-700 leading-snug">{delta.text}</p>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="p-8 text-center text-slate-400 text-sm">No recent changes detected.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Safety Banner */}
-                        <div className="bg-slate-900 rounded-[2rem] p-8 shadow-xl shadow-slate-200 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                            <div className="relative z-10">
-                                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
-                                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                                    Should I be worried?
-                                </h3>
-                                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                                    You are not in immediate danger. Your risk level is manageable.
-                                </p>
-                                <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10">
-                                    <p className="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Doctor Alert</p>
-                                    <p className="text-slate-200 text-sm font-medium">
-                                        If glucose &gt; 180 mg/dL for 3 days.
+                                    <p className="text-base font-medium text-slate-600/90 leading-relaxed max-w-lg">
+                                        {status.message}
                                     </p>
                                 </div>
+
+                                <div className={`hidden md:flex h-20 w-20 rounded-full border-4 items-center justify-center bg-white shadow-sm
+                            ${status.level === 'low' ? 'border-emerald-100 text-emerald-500' :
+                                        status.level === 'high' ? 'border-rose-100 text-rose-500' : 'border-amber-100 text-amber-500'}`}>
+                                    {status.level === 'low' ? <CheckCircle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}
+                                </div>
                             </div>
                         </div>
+                    )
+                }
 
+                {/* 2. My Vitals Section (Real Data & Share) */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-indigo-600" />
+                            My Vitals
+                        </h2>
+                        <Link href="/patient/history" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-4 transition-all">
+                            View All History
+                        </Link>
                     </div>
 
-                    <ClinicalCoPilot patientContext={patient} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {/* Glucose Card */}
+                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="bg-blue-50 p-2.5 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                        <Droplets className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Glucose</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.blood_glucose_level || '--'}</h3>
+                                        <span className="text-sm font-semibold text-slate-400">mg/dL</span>
+                                    </div>
+                                </div>
+                                {patient?.inputs?.blood_glucose_level && (
+                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.blood_glucose_level > 140 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {patient.inputs.blood_glucose_level > 140 ? 'High' : 'Normal'}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* HbA1c Card */}
+                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="bg-purple-50 p-2.5 rounded-xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                        <Activity className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">HbA1c</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.HbA1c_level || '--'}</h3>
+                                        <span className="text-sm font-semibold text-slate-400">%</span>
+                                    </div>
+                                </div>
+                                {patient?.inputs?.HbA1c_level && (
+                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.HbA1c_level > 6.5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {patient.inputs.HbA1c_level > 6.5 ? 'Elevated' : 'Normal'}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* BMI Card */}
+                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="bg-orange-50 p-2.5 rounded-xl text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                        <Scale className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">BMI</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.bmi || '--'}</h3>
+                                        <span className="text-sm font-semibold text-slate-400">kg/m²</span>
+                                    </div>
+                                </div>
+                                {patient?.inputs?.bmi && (
+                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.bmi > 25 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {patient.inputs.bmi > 25 ? 'Overweight' : 'Normal'}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
+
+                {/* 3. Trends & Safety (Right Column) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Trends List */}
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-slate-400" />
+                                Recent Changes
+                            </h3>
+                        </div>
+                        <div className="divide-y divide-slate-50">
+                            {deltas.length > 0 ? (
+                                deltas.map((delta: any, i: number) => (
+                                    <div key={i} className="p-6 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
+                                        <div className={`p-2.5 rounded-2xl flex-none shadow-sm ${delta.positive ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                            <TrendingUp className={`h-5 w-5 ${delta.positive ? 'rotate-0' : 'rotate-180'}`} />
+                                        </div>
+                                        <p className="text-sm font-semibold text-slate-700 leading-snug">{delta.text}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-8 text-center text-slate-400 text-sm">No recent changes detected.</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Safety Banner */}
+                    <div className="bg-slate-900 rounded-[2rem] p-8 shadow-xl shadow-slate-200 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                        <div className="relative z-10">
+                            <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                                <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                                Should I be worried?
+                            </h3>
+                            <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                                You are not in immediate danger. Your risk level is manageable.
+                            </p>
+                            <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10">
+                                <p className="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Doctor Alert</p>
+                                <p className="text-slate-200 text-sm font-medium">
+                                    If glucose &gt; 180 mg/dL for 3 days.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <ClinicalCoPilot patientContext={patient} />
             </main>
         </div>
     );
