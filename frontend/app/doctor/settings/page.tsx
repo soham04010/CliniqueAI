@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { 
-    Activity, LogOut, ArrowLeft, Loader2, Lock, Phone, 
-    Camera, Save, ShieldCheck, AlertTriangle, CheckCircle, 
-    Stethoscope, FileText, Bell, AlertCircle as AlertIcon, Mail 
+import {
+    Activity, LogOut, ArrowLeft, Loader2, Lock, Phone,
+    Camera, Save, ShieldCheck, AlertTriangle, CheckCircle,
+    Stethoscope, FileText, Bell, AlertCircle as AlertIcon, Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import Sidebar from "@/components/doctor/Sidebar"; // Assuming you have this
-import Header from "@/components/doctor/Header";   // Assuming you have this
+import Sidebar from "@/components/doctor/Sidebar";
+import Header from "@/components/doctor/Header";
+
+
 
 export default function DoctorSettingsPage() {
     const router = useRouter();
@@ -49,13 +51,14 @@ export default function DoctorSettingsPage() {
     const [newPassword, setNewPassword] = useState("");
     const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
     const [emailOtp, setEmailOtp] = useState("");
-    
+
     // Phone States
     const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
     const [phoneOtp, setPhoneOtp] = useState("");
     const [newPhone, setNewPhone] = useState("");
     const [otpSent, setOtpSent] = useState(false);
     const [otpLoading, setOtpLoading] = useState(false);
+
 
     // 1. INITIAL FETCH
     useEffect(() => {
@@ -82,7 +85,7 @@ export default function DoctorSettingsPage() {
             setLicense(data.license || "");
             setPhotoPreview(data.profilePicture || data.avatar);
             // Mock notifications if not in DB yet
-            if(data.notifications) setNotifications(data.notifications);
+            if (data.notifications) setNotifications(data.notifications);
             setLoading(false);
         };
 
@@ -113,7 +116,7 @@ export default function DoctorSettingsPage() {
             formData.append("bio", bio);
             formData.append("license", license);
             // formData.append("notifications", JSON.stringify(notifications)); // If backend supports it
-            
+
             if (photoFile) {
                 formData.append("profilePicture", photoFile);
             }
@@ -123,18 +126,18 @@ export default function DoctorSettingsPage() {
             });
 
             // Update Local Storage
-            const updatedUser = { 
-                ...user, 
-                name: data.name, 
+            const updatedUser = {
+                ...user,
+                name: data.name,
                 specialty: data.specialty,
                 clinicName: data.clinicName,
                 bio: data.bio,
                 license: data.license,
-                profilePicture: data.profilePicture 
+                profilePicture: data.profilePicture
             };
             localStorage.setItem("user", JSON.stringify(updatedUser));
             setUser(updatedUser);
-            
+
             toast.success("Profile updated successfully!");
             window.dispatchEvent(new Event("storage"));
         } catch (error: any) {
@@ -183,57 +186,61 @@ export default function DoctorSettingsPage() {
         }
     };
 
-    // 5. PHONE VERIFICATION
-const handleRequestPhoneOtp = async () => {
-    if (!newPhone || newPhone.length < 10) return toast.error("Enter a valid 10-digit number");
-    
-    // Automatically add +91 if missing
-    const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
+    // 5. PHONE VERIFICATION (FIREBASE)
 
-    setOtpLoading(true);
-    try {
-        // Send the FORMATTED number to backend
-        await api.post("/auth/request-phone-otp", { phoneNumber: formattedPhone });
-        toast.success("SMS Sent!", { description: `OTP sent to ${formattedPhone}` });
-        setOtpSent(true);
-    } catch (error: any) {
-        toast.error(error.response?.data?.message || "Failed to send SMS");
-    } finally {
-        setOtpLoading(false);
-    }
-};
-const handleVerifyPhoneUpdate = async () => {
-    if (!phoneOtp) return toast.error("Please enter the SMS code");
-    
-    // Re-format to ensure consistency
-    const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
+    // Initialize Recaptcha
 
-    setOtpLoading(true);
-    try {
-        const { data } = await api.put("/auth/verify-phone-update", { 
-            phoneNumber: formattedPhone, // Send formatted number
-            otp: phoneOtp 
-        });
-        
-        toast.success("Phone Verified!", { description: "Number updated successfully." });
-        
-        // Update State
-        const updatedUser = { ...user, mobileNumber: data.mobileNumber, isMobileVerified: true };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
 
-        setIsPhoneDialogOpen(false);
-        setOtpSent(false);
-        setPhoneOtp("");
-        setNewPhone("");
-    } catch (error: any) {
-        toast.error(error.response?.data?.message || "Invalid SMS Code");
-    } finally {
-        setOtpLoading(false);
-    }
-};
+    const handleRequestPhoneOtp = async () => {
+        if (!newPhone || newPhone.length < 10) return toast.error("Enter a valid 10-digit number");
 
-    if (loading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-teal-600"/></div>;
+        // Format: E.164 (e.g., +919876543210)
+        const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
+
+        setOtpLoading(true);
+        try {
+            await api.post("/auth/request-whatsapp-otp", { phoneNumber: formattedPhone });
+            setOtpSent(true);
+            toast.success("WhatsApp Code Sent!", { description: `Check WhatsApp on ${formattedPhone}` });
+        } catch (error: any) {
+            console.error("WhatsApp OTP Error:", error);
+            toast.error(error.response?.data?.message || "Failed to send WhatsApp code.");
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleVerifyPhoneUpdate = async () => {
+        if (!phoneOtp) return toast.error("Please enter the 6-digit code");
+
+        const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
+
+        setOtpLoading(true);
+        try {
+            const { data } = await api.put("/auth/verify-whatsapp-otp", {
+                phoneNumber: formattedPhone,
+                otp: phoneOtp
+            });
+
+            toast.success("Verified!", { description: "Phone number updated." });
+
+            // Update State
+            const updatedUser = { ...user, mobileNumber: data.mobileNumber, isMobileVerified: true };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            setUser(updatedUser);
+
+            setIsPhoneDialogOpen(false);
+            setOtpSent(false);
+            setPhoneOtp("");
+            setNewPhone("");
+        } catch (error: any) {
+            console.error("Verification Error:", error);
+            toast.error(error.response?.data?.message || "Invalid Code");
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+    if (loading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-teal-600" /></div>;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 flex text-sm selection:bg-teal-100 selection:text-teal-900">
@@ -261,7 +268,7 @@ const handleVerifyPhoneUpdate = async () => {
                                 <CardDescription>Visible to patients and administrators.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 pt-6">
-                                
+
                                 {/* Photo Upload */}
                                 <div className="flex items-center gap-6">
                                     <div className="relative group">
@@ -269,18 +276,18 @@ const handleVerifyPhoneUpdate = async () => {
                                             <AvatarImage src={photoPreview || user?.profilePicture} className="object-cover" />
                                             <AvatarFallback className="text-2xl bg-teal-100 text-teal-600">Dr</AvatarFallback>
                                         </Avatar>
-                                        <div 
+                                        <div
                                             onClick={() => fileInputRef.current?.click()}
                                             className="absolute bottom-0 right-0 bg-teal-600 p-2 rounded-full text-white cursor-pointer shadow-md hover:bg-teal-700 transition-colors"
                                         >
                                             <Camera className="h-4 w-4" />
                                         </div>
-                                        <input 
-                                            type="file" 
-                                            ref={fileInputRef} 
-                                            className="hidden" 
-                                            accept="image/*" 
-                                            onChange={handlePhotoSelect} 
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handlePhotoSelect}
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -314,11 +321,11 @@ const handleVerifyPhoneUpdate = async () => {
                                 {/* Bio */}
                                 <div className="space-y-2">
                                     <Label htmlFor="bio">Professional Bio</Label>
-                                    <Textarea 
-                                        id="bio" 
-                                        value={bio} 
-                                        onChange={(e) => setBio(e.target.value)} 
-                                        placeholder="Briefly describe your experience..." 
+                                    <Textarea
+                                        id="bio"
+                                        value={bio}
+                                        onChange={(e) => setBio(e.target.value)}
+                                        placeholder="Briefly describe your experience..."
                                         className="min-h-[100px]"
                                     />
                                 </div>
@@ -335,11 +342,11 @@ const handleVerifyPhoneUpdate = async () => {
                                             <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-100">Unverified</Badge>
                                         )}
                                     </Label>
-                                    <Input 
-                                        id="license" 
-                                        value={license} 
-                                        onChange={(e) => setLicense(e.target.value)} 
-                                        placeholder="Enter License Number" 
+                                    <Input
+                                        id="license"
+                                        value={license}
+                                        onChange={(e) => setLicense(e.target.value)}
+                                        placeholder="Enter License Number"
                                     />
                                 </div>
 
@@ -398,104 +405,104 @@ const handleVerifyPhoneUpdate = async () => {
 
                         {/* 3. SECURITY & CONTACT */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            
-                           {/* 2. CONTACT VERIFICATION (SMS) */}
-<Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
-    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-        <CardTitle className="flex items-center gap-2 text-base">
-            <Phone className="h-4 w-4 text-teal-600" />
-            Direct Contact Line
-        </CardTitle>
-        <CardDescription>Verified mobile number for urgent alerts.</CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-4 pt-6">
-        <div className="grid gap-2">
-            <Label>Mobile Number</Label>
-            <div className="flex items-center gap-2">
-                <div className="relative flex-1 flex items-center">
-                    {/* Visual Prefix for Main Display */}
-                    <span className="absolute left-0 top-0 bottom-0 bg-slate-100 border-r border-slate-200 text-slate-500 px-3 flex items-center rounded-l-md text-sm pointer-events-none">
-                        +91
-                    </span>
-                    <Input 
-                        // Strip +91 for display if it exists, otherwise show raw
-                        value={user?.mobileNumber ? user.mobileNumber.replace(/^\+91/, '') : ""} 
-                        disabled 
-                        className="pl-14 bg-slate-50 text-slate-700 font-mono" 
-                        placeholder="Not Verified"
-                    />
-                    {/* Verification Badge */}
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {user?.isMobileVerified ? (
-                            <CheckCircle className="h-5 w-5 text-emerald-500 bg-white rounded-full" />
-                        ) : (
-                            <AlertTriangle className="h-5 w-5 text-amber-500 bg-white rounded-full" />
-                        )}
-                    </div>
-                </div>
 
-                {/* Change Button & Dialog */}
-                <Dialog open={isPhoneDialogOpen} onOpenChange={setIsPhoneDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" className="text-teal-600 border-teal-200 hover:bg-teal-50 min-w-[90px]">
-                            {user?.mobileNumber ? "Change" : "Add"}
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-white z-50 shadow-xl">
-                        <DialogHeader>
-                            <DialogTitle>Verify Mobile Number</DialogTitle>
-                            <DialogDescription>
-                                We will send an SMS verification code to your device.
-                            </DialogDescription>
-                        </DialogHeader>
+                            {/* 2. CONTACT VERIFICATION (SMS) */}
+                            <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
+                                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Phone className="h-4 w-4 text-teal-600" />
+                                        Direct Contact Line
+                                    </CardTitle>
+                                    <CardDescription>Verified mobile number for urgent alerts.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4 pt-6">
+                                    <div className="grid gap-2">
+                                        <Label>Mobile Number</Label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative flex-1 flex items-center">
+                                                {/* Visual Prefix for Main Display */}
+                                                <span className="absolute left-0 top-0 bottom-0 bg-slate-100 border-r border-slate-200 text-slate-500 px-3 flex items-center rounded-l-md text-sm pointer-events-none">
+                                                    +91
+                                                </span>
+                                                <Input
+                                                    // Strip +91 for display if it exists, otherwise show raw
+                                                    value={user?.mobileNumber ? user.mobileNumber.replace(/^\+91/, '') : ""}
+                                                    disabled
+                                                    className="pl-14 bg-slate-50 text-slate-700 font-mono"
+                                                    placeholder="Not Verified"
+                                                />
+                                                {/* Verification Badge */}
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    {user?.isMobileVerified ? (
+                                                        <CheckCircle className="h-5 w-5 text-emerald-500 bg-white rounded-full" />
+                                                    ) : (
+                                                        <AlertTriangle className="h-5 w-5 text-amber-500 bg-white rounded-full" />
+                                                    )}
+                                                </div>
+                                            </div>
 
-                        {!otpSent ? (
-                            <div className="space-y-4 pt-4">
-                                <div className="space-y-2">
-                                    <Label>Phone Number (10-digit)</Label>
-                                    <div className="flex items-center">
-                                        <span className="bg-slate-100 border border-r-0 border-slate-200 text-slate-500 px-3 py-2 rounded-l-md text-sm border-y">+91</span>
-                                        <Input 
-                                            placeholder="9876543210" 
-                                            value={newPhone} 
-                                            onChange={(e) => setNewPhone(e.target.value)} 
-                                            className="rounded-l-none"
-                                            maxLength={10} 
-                                        />
+                                            {/* Change Button & Dialog */}
+                                            <Dialog open={isPhoneDialogOpen} onOpenChange={setIsPhoneDialogOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="outline" className="text-teal-600 border-teal-200 hover:bg-teal-50 min-w-[90px]">
+                                                        {user?.mobileNumber ? "Change" : "Add"}
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="bg-white z-50 shadow-xl">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Verify Mobile Number</DialogTitle>
+                                                        <DialogDescription>
+                                                            We will send an SMS verification code to your device.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+
+                                                    {!otpSent ? (
+                                                        <div className="space-y-4 pt-4">
+                                                            <div className="space-y-2">
+                                                                <Label>Phone Number (10-digit)</Label>
+                                                                <div className="flex items-center">
+                                                                    <span className="bg-slate-100 border border-r-0 border-slate-200 text-slate-500 px-3 py-2 rounded-l-md text-sm border-y">+91</span>
+                                                                    <Input
+                                                                        placeholder="9876543210"
+                                                                        value={newPhone}
+                                                                        onChange={(e) => setNewPhone(e.target.value)}
+                                                                        className="rounded-l-none"
+                                                                        maxLength={10}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <Button onClick={handleRequestPhoneOtp} disabled={otpLoading} className="w-full bg-slate-900">
+                                                                {otpLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Send SMS Code
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-4 pt-4">
+                                                            <div className="bg-emerald-50 text-emerald-700 text-sm p-3 rounded-md text-center border border-emerald-100">
+                                                                Code sent to <strong>+91 {newPhone}</strong>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label>Enter 6-Digit SMS Code</Label>
+                                                                <Input
+                                                                    placeholder="123456"
+                                                                    value={phoneOtp}
+                                                                    onChange={(e) => setPhoneOtp(e.target.value)}
+                                                                    maxLength={6}
+                                                                    className="text-center tracking-[0.5em] text-lg font-bold"
+                                                                />
+                                                            </div>
+                                                            <Button onClick={handleVerifyPhoneUpdate} disabled={otpLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                                                                {otpLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Verify & Save
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
                                     </div>
-                                </div>
-                                <Button onClick={handleRequestPhoneOtp} disabled={otpLoading} className="w-full bg-slate-900">
-                                    {otpLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} 
-                                    Send SMS Code
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="space-y-4 pt-4">
-                                <div className="bg-emerald-50 text-emerald-700 text-sm p-3 rounded-md text-center border border-emerald-100">
-                                    Code sent to <strong>+91 {newPhone}</strong>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Enter 6-Digit SMS Code</Label>
-                                    <Input 
-                                        placeholder="123456" 
-                                        value={phoneOtp} 
-                                        onChange={(e) => setPhoneOtp(e.target.value)} 
-                                        maxLength={6} 
-                                        className="text-center tracking-[0.5em] text-lg font-bold" 
-                                    />
-                                </div>
-                                <Button onClick={handleVerifyPhoneUpdate} disabled={otpLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                                    {otpLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} 
-                                    Verify & Save
-                                </Button>
-                            </div>
-                        )}
-                    </DialogContent>
-                </Dialog>
-            </div>
-        </div>
-    </CardContent>
-</Card>
+                                </CardContent>
+                            </Card>
                             {/* Password Update */}
                             <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
                                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">

@@ -33,7 +33,8 @@ router.post('/google', googleLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/login-otp', verifyLoginOTP);
-router.get('/fix-role/:email', require('../controllers/authController').fixUserRole); // Temporary Public Route
+router.post('/login-otp', verifyLoginOTP);
+// router.get('/fix-role/:email', ...); // Removed
 
 // Protected Routes
 // NOTE: We added upload.single('profilePicture') here to handle the image file
@@ -47,8 +48,9 @@ router.post('/request-password-otp', protect, requestPasswordChangeOtp);
 router.put('/update-password-secure', protect, updatePasswordSecure);
 
 // NEW: Phone Verification Routes
-router.post('/request-phone-otp', protect, requestPhoneChangeOtp);
-router.put('/verify-phone-update', protect, verifyPhoneChangeOtp); // Aligning with frontend call
+// WhatsApp OTP Routes
+router.post('/request-whatsapp-otp', protect, require('../controllers/authController').requestWhatsAppOtp);
+router.put('/verify-whatsapp-otp', protect, require('../controllers/authController').verifyWhatsAppOtp);
 
 // Route for the initial "Select Doctor" dropdown
 router.get('/doctors', protect, async (req, res) => {

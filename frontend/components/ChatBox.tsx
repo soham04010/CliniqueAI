@@ -83,6 +83,14 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
       }
     };
 
+    const handleDisconnect = (reason: any) => {
+      console.warn("⚠️ Socket Disconnected:", reason);
+    };
+
+    const handleConnectError = (error: any) => {
+      console.error("❌ Socket Connection Error:", error);
+    };
+
     // B. Handle Incoming Messages
     const handleReceiveMessage = (data: any) => {
       console.log("📩 New Message Received:", data);
@@ -107,6 +115,8 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
     };
 
     socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
     socket.on("receive_message", handleReceiveMessage);
 
     // Initial Join (if already connected but component remounted)
@@ -116,6 +126,8 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
 
     return () => {
       socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
       socket.off("receive_message", handleReceiveMessage);
     };
   }, [activeChat, currentUser]);
