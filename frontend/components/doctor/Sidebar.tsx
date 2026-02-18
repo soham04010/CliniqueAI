@@ -44,12 +44,12 @@ export default function Sidebar() {
                 <div className={`h-24 flex items-center ${isCollapsed ? 'justify-center flex-col gap-2' : 'justify-between px-6'}`}>
                     <Link href="/doctor/dashboard">
                         <div className="flex items-center gap-3 cursor-pointer group">
-                            <div className="h-10 w-10 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-600/20 group-hover:scale-105 transition-transform">
-                                <Activity className="h-6 w-6" strokeWidth={3} />
+                            <div className="h-10 w-10 bg-slate-900 rounded-xl flex items-center justify-center border border-white/10 shadow-lg group-hover:scale-105 transition-transform">
+                                <Activity className="h-6 w-6 text-[#2bd4bd]" strokeWidth={3} />
                             </div>
                             {!isCollapsed && (
-                                <span className="font-bold text-2xl text-slate-900 hidden lg:block tracking-tight group-hover:text-teal-900 transition-colors">
-                                    Clinique<span className="text-teal-600">AI</span>
+                                <span className="font-black text-2xl text-slate-900 hidden lg:block tracking-tighter group-hover:text-[#2bd4bd] transition-colors">
+                                    CliniqueAI
                                 </span>
                             )}
                         </div>

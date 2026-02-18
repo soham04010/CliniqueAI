@@ -240,8 +240,8 @@ export default function PatientDashboard() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Good Morning, {patient?.name?.split(' ')[0] || 'Patient'}</h1>
-                        <p className="text-slate-500">Here is your health overview for today.</p>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Good Morning, {patient?.name?.split(' ')[0] || 'Patient'}</h1>
+                        <p className="text-slate-500 font-medium">Here is your health overview for today.</p>
                     </div>
 
                     <div className="flex items-center gap-3">
