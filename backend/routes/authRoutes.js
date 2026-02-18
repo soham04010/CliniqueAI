@@ -106,4 +106,7 @@ router.get('/contacts', protect, async (req, res) => {
   }
 });
 
+// Get Public User Profile
+router.get('/user/:id', protect, require('../controllers/authController').getUserPublicProfile);
+
 module.exports = router;

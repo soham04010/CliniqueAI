@@ -552,6 +552,20 @@ const googleLogin = async (req, res) => {
   }
 };
 
+// @desc    Get User Public Profile (Name, Email, Role)
+// @route   GET /api/auth/user/:id
+const getUserPublicProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('name email role profilePicture');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyOTP,
@@ -566,5 +580,6 @@ module.exports = {
   googleLogin,
   requestPasswordChangeOtp,
   requestWhatsAppOtp,
-  verifyWhatsAppOtp
+  verifyWhatsAppOtp,
+  getUserPublicProfile
 };
