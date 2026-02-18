@@ -180,11 +180,11 @@ export default function LoginPage() {
         >
           {/* Header */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="h-9 w-9 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/20">
-                <Activity className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-3 mb-6 group cursor-pointer">
+              <div className="h-9 w-9 bg-slate-900 rounded-lg flex items-center justify-center border border-white/10 shadow-lg group-hover:scale-110 transition-transform">
+                <Activity className="h-5 w-5 text-[#2bd4bd]" />
               </div>
-              <span className="text-xl font-bold text-slate-900 tracking-tight">CliniqueAI</span>
+              <span className="text-xl font-black text-slate-900 tracking-tight group-hover:text-[#2bd4bd] transition-colors">CliniqueAI</span>
             </div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Welcome back</h1>
             <p className="text-slate-500">Please enter your details to sign in.</p>
