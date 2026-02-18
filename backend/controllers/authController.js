@@ -4,7 +4,10 @@ const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
-const twilio = require('twilio');
+const twilio = require('twilio'); // Re-added for WhatsApp
+
+// Initialize Twilio Client
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // 1. CONFIGURE CLOUDINARY
 cloudinary.config({
@@ -13,15 +16,78 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 2. CONFIGURE TWILIO
-const twilioClient = new twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
-
 // Generate Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+};
+
+// --- WhatsApp OTP Functions ---
+
+const requestWhatsAppOtp = async (req, res) => {
+  const { phoneNumber } = req.body; // Expecting E.164 format (e.g. +91...)
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Generate 6-Digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Save OTP to User
+    user.verificationCode = otp;
+    user.verificationCodeExpire = Date.now() + 10 * 60 * 1000; // 10 mins
+    await user.save();
+
+    // Sanitize Phone Number (Remove spaces, dashes, parens)
+    const sanitizedPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
+
+    // Send WhatsApp Message
+    await twilioClient.messages.create({
+      body: `Your CliniqueAI verification code is: ${otp}`,
+      from: 'whatsapp:+14155238886', // Twilio Sandbox Number
+      to: `whatsapp:${sanitizedPhone}`
+    });
+
+    res.status(200).json({ message: "WhatsApp OTP sent successfully." });
+  } catch (error) {
+    console.error("Twilio WhatsApp Error:", error);
+    res.status(500).json({ message: "Failed to send WhatsApp OTP.", error: error.message });
+  }
+};
+
+const verifyWhatsAppOtp = async (req, res) => {
+  const { otp, phoneNumber } = req.body;
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.verificationCode !== otp || user.verificationCodeExpire < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // Update Phone
+    user.mobileNumber = phoneNumber;
+    user.isMobileVerified = true;
+
+    // Clear OTP
+    user.verificationCode = undefined;
+    user.verificationCodeExpire = undefined;
+
+    // Update Linked PatientData
+    const PatientData = require('../models/PatientData');
+    await PatientData.updateMany(
+      { patient_id: user._id },
+      { $set: { phone: phoneNumber } }
+    );
+
+    await user.save();
+
+    res.status(200).json({ message: "Phone number verified successfully", mobileNumber: phoneNumber });
+  } catch (error) {
+    console.error("Verification Error:", error);
+    res.status(500).json({ message: "Verification failed", error: error.message });
+  }
 };
 
 // @desc    Register Patient & Send OTP Code
@@ -486,97 +552,6 @@ const googleLogin = async (req, res) => {
   }
 };
 
-// @desc    Request OTP for Phone Change (SMS via Twilio)
-// @route   POST /api/auth/request-phone-otp
-const requestPhoneChangeOtp = async (req, res) => {
-  const { phoneNumber } = req.body; // New number to verify
-
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    // Generate 6-Digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Save OTP
-    user.verificationCode = otp;
-    user.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
-    await user.save();
-
-    // Try Sending SMS via Twilio
-    try {
-      await twilioClient.messages.create({
-        body: `CliniqueAI Verification Code: ${otp}`,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: phoneNumber // Ensure frontend sends with country code (e.g. +1...)
-      });
-      res.status(200).json({ message: "SMS sent successfully." });
-    } catch (smsError) {
-      console.error("Twilio Error:", smsError);
-      // Fallback for Dev Mode or if Twilio fails (prevent UI hang)
-      res.status(200).json({
-        message: "SMS failed (Dev Mode). Check console.",
-        devOtp: otp
-      });
-    }
-  } catch (error) {
-    res.status(500).json({ message: "Failed to generate OTP" });
-  }
-};
-
-// @desc    Verify OTP and Update Phone
-// @route   PUT /api/auth/verify-phone-update
-const verifyPhoneChangeOtp = async (req, res) => {
-  const { otp, phoneNumber } = req.body;
-
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    if (user.verificationCode !== otp || user.verificationCodeExpire < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired SMS code" });
-    }
-
-    // Update Phone
-    user.mobileNumber = phoneNumber; // Update verified number field
-    user.isMobileVerified = true;
-
-    // Clear OTP
-    user.verificationCode = undefined;
-    user.verificationCodeExpire = undefined;
-
-    // Also update linked PatientData if exists
-    const PatientData = require('../models/PatientData');
-    await PatientData.updateMany(
-      { patient_id: user._id },
-      { $set: { phone: phoneNumber } }
-    );
-
-    await user.save();
-
-    res.status(200).json({ message: "Phone number updated successfully", mobileNumber: phoneNumber });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Temporary Fix for User Role (Dev Helper)
-// @route   GET /api/auth/fix-role/:email
-const fixUserRole = async (req, res) => {
-  const { email } = req.params;
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.role = 'patient';
-    await user.save();
-
-    res.json({ message: `Successfully updated role for ${email} to 'patient'. You can now use Forgot Password.` });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 module.exports = {
   registerUser,
   verifyOTP,
@@ -589,8 +564,7 @@ module.exports = {
   verifyLoginOTP,
   toggle2FA,
   googleLogin,
-  requestPhoneChangeOtp,
   requestPasswordChangeOtp,
-  verifyPhoneChangeOtp,
-  fixUserRole // NEW EXPORT
+  requestWhatsAppOtp,
+  verifyWhatsAppOtp
 };

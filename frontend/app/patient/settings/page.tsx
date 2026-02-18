@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import api from "@/lib/api";
 
+
 export default function PatientSettingsPage() {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,13 +32,14 @@ export default function PatientSettingsPage() {
     const [newPassword, setNewPassword] = useState("");
     const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
     const [emailOtp, setEmailOtp] = useState("");
-    
+
     // Phone States
     const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
     const [phoneOtp, setPhoneOtp] = useState("");
     const [newPhone, setNewPhone] = useState("");
     const [otpSent, setOtpSent] = useState(false);
     const [otpLoading, setOtpLoading] = useState(false);
+
 
     // 1. INITIAL FETCH
     useEffect(() => {
@@ -101,7 +103,7 @@ export default function PatientSettingsPage() {
             const updatedUser = { ...user, name: data.name, profilePicture: data.profilePicture };
             localStorage.setItem("user", JSON.stringify(updatedUser));
             setUser(updatedUser);
-            
+
             toast.success("Profile updated successfully!");
             window.dispatchEvent(new Event("storage"));
         } catch (error: any) {
@@ -132,7 +134,7 @@ export default function PatientSettingsPage() {
 
     const handleConfirmPasswordChange = async () => {
         if (!emailOtp) return toast.error("Please enter the verification code");
-        
+
         setSaving(true);
         try {
             // Step 2: Verify OTP and Change Password
@@ -141,7 +143,7 @@ export default function PatientSettingsPage() {
                 newPassword,
                 otp: emailOtp
             });
-            
+
             toast.success("Password updated securey!");
             setIsEmailDialogOpen(false);
             setCurrentPassword("");
@@ -154,62 +156,66 @@ export default function PatientSettingsPage() {
         }
     };
 
-const handleRequestPhoneOtp = async () => {
-    if (!newPhone || newPhone.length < 10) return toast.error("Enter a valid 10-digit number");
-    
-    // Automatically add +91 if missing
-    const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
+    // 5. PHONE VERIFICATION (FIREBASE)
 
-    setOtpLoading(true);
-    try {
-        // Send the FORMATTED number to backend
-        await api.post("/auth/request-phone-otp", { phoneNumber: formattedPhone });
-        toast.success("SMS Sent!", { description: `OTP sent to ${formattedPhone}` });
-        setOtpSent(true);
-    } catch (error: any) {
-        toast.error(error.response?.data?.message || "Failed to send SMS");
-    } finally {
-        setOtpLoading(false);
-    }
-};
+    // Initialize Recaptcha
 
-const handleVerifyPhoneUpdate = async () => {
-    if (!phoneOtp) return toast.error("Please enter the SMS code");
-    
-    // Re-format to ensure consistency
-    const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
 
-    setOtpLoading(true);
-    try {
-        const { data } = await api.put("/auth/verify-phone-update", { 
-            phoneNumber: formattedPhone, // Send formatted number
-            otp: phoneOtp 
-        });
-        
-        toast.success("Phone Verified!", { description: "Number updated successfully." });
-        
-        // Update State
-        const updatedUser = { ...user, mobileNumber: data.mobileNumber, isMobileVerified: true };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
+    const handleRequestPhoneOtp = async () => {
+        if (!newPhone || newPhone.length < 10) return toast.error("Enter a valid 10-digit number");
 
-        setIsPhoneDialogOpen(false);
-        setOtpSent(false);
-        setPhoneOtp("");
-        setNewPhone("");
-    } catch (error: any) {
-        toast.error(error.response?.data?.message || "Invalid SMS Code");
-    } finally {
-        setOtpLoading(false);
-    }
-};
+        // Format: E.164 (e.g., +919876543210)
+        const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
 
+        setOtpLoading(true);
+        try {
+            await api.post("/auth/request-whatsapp-otp", { phoneNumber: formattedPhone });
+            setOtpSent(true);
+            toast.success("WhatsApp Code Sent!", { description: `Check WhatsApp on ${formattedPhone}` });
+        } catch (error: any) {
+            console.error("WhatsApp OTP Error:", error);
+            toast.error(error.response?.data?.message || "Failed to send WhatsApp code.");
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleVerifyPhoneUpdate = async () => {
+        if (!phoneOtp) return toast.error("Please enter the 6-digit code");
+
+        const formattedPhone = newPhone.startsWith("+") ? newPhone : `+91${newPhone}`;
+
+        setOtpLoading(true);
+        try {
+            const { data } = await api.put("/auth/verify-whatsapp-otp", {
+                phoneNumber: formattedPhone,
+                otp: phoneOtp
+            });
+
+            toast.success("Verified!", { description: "Phone number updated." });
+
+            // Update State
+            const updatedUser = { ...user, mobileNumber: data.mobileNumber, isMobileVerified: true };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            setUser(updatedUser);
+
+            setIsPhoneDialogOpen(false);
+            setOtpSent(false);
+            setPhoneOtp("");
+            setNewPhone("");
+        } catch (error: any) {
+            console.error("Verification Error:", error);
+            toast.error(error.response?.data?.message || "Invalid Code");
+        } finally {
+            setOtpLoading(false);
+        }
+    };
     const handleLogout = () => {
         localStorage.clear();
         router.push("/login");
     };
 
-    if (loading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-indigo-600"/></div>;
+    if (loading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-indigo-600" /></div>;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-12">
@@ -265,7 +271,7 @@ const handleVerifyPhoneUpdate = async () => {
                         <CardDescription>Visible to your doctors.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
-                        
+
                         {/* Photo Upload Section */}
                         <div className="flex items-center gap-6">
                             <div className="relative group">
@@ -273,18 +279,18 @@ const handleVerifyPhoneUpdate = async () => {
                                     <AvatarImage src={photoPreview || user?.profilePicture} className="object-cover" />
                                     <AvatarFallback className="text-2xl bg-indigo-100 text-indigo-600">{user?.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <div 
+                                <div
                                     onClick={() => fileInputRef.current?.click()}
                                     className="absolute bottom-0 right-0 bg-indigo-600 p-2 rounded-full text-white cursor-pointer shadow-md hover:bg-indigo-700 transition-colors"
                                 >
                                     <Camera className="h-4 w-4" />
                                 </div>
-                                <input 
-                                    type="file" 
-                                    ref={fileInputRef} 
-                                    className="hidden" 
-                                    accept="image/*" 
-                                    onChange={handlePhotoSelect} 
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handlePhotoSelect}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -401,17 +407,17 @@ const handleVerifyPhoneUpdate = async () => {
 
                                         {!otpSent ? (
                                             <div className="space-y-2">
-    <Label>Phone Number (10-digit)</Label>
-    <div className="flex items-center">
-        <span className="bg-slate-100 border border-r-0 border-slate-200 text-slate-500 px-3 py-2 rounded-l-md text-sm">+91</span>
-        <Input 
-            placeholder="9876543210" 
-            value={newPhone} 
-            onChange={(e) => setNewPhone(e.target.value)} 
-            className="rounded-l-none"
-            maxLength={10} // Restrict to 10 digits
-        />
-    </div>
+                                                <Label>Phone Number (10-digit)</Label>
+                                                <div className="flex items-center">
+                                                    <span className="bg-slate-100 border border-r-0 border-slate-200 text-slate-500 px-3 py-2 rounded-l-md text-sm">+91</span>
+                                                    <Input
+                                                        placeholder="9876543210"
+                                                        value={newPhone}
+                                                        onChange={(e) => setNewPhone(e.target.value)}
+                                                        className="rounded-l-none"
+                                                        maxLength={10} // Restrict to 10 digits
+                                                    />
+                                                </div>
                                                 <Button onClick={handleRequestPhoneOtp} disabled={otpLoading} className="w-full bg-slate-900">
                                                     {otpLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                                     Send SMS Code
