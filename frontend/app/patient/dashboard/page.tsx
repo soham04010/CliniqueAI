@@ -649,6 +649,7 @@ export default function PatientDashboard() {
                     </div>
 
                     <ClinicalCoPilot patientContext={patient} />
+                </div>
             </main>
         </div>
     );
