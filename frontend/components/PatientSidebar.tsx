@@ -37,7 +37,7 @@ export default function PatientSidebar() {
                     console.error("Failed to parse user data", e);
                 }
             }
-            
+
             // Listen for profile updates (photo changes)
             const handleStorageChange = () => {
                 const updatedStr = localStorage.getItem("user");
@@ -55,6 +55,7 @@ export default function PatientSidebar() {
 
     const navItems = [
         { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
+        { name: "History", href: "/patient/history", icon: Activity },
         { name: "Messages", href: "/patient/messages", icon: MessageSquare },
     ];
 

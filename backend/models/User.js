@@ -16,16 +16,17 @@ const userSchema = new mongoose.Schema({
     default: 'patient'
   },
   specialization: { type: String }, // For doctors
+  primaryDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // For patients: Linked Doctor
 
   // Profile Fields
   phone: { type: String }, // Old field (kept for backward compatibility)
   mobileNumber: { type: String }, // NEW: Verified Mobile Number
   isMobileVerified: { type: Boolean, default: false }, // NEW
-  
+
   bio: { type: String },
   clinicName: { type: String },
   license: { type: String },
-  
+
   // Profile Picture (Cloudinary URL)
   avatar: { type: String }, // Used by Google Auth
   profilePicture: { type: String }, // NEW: Custom Uploaded Photo
