@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { Send, MessageSquare, Loader2, User as UserIcon, ExternalLink, Trash2 } from "lucide-react";
+import { Send, MessageSquare, Loader2, User as UserIcon, ExternalLink, Trash2, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -208,9 +208,9 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
   );
 
   return (
-    <div className="flex h-full bg-white overflow-hidden shadow-none">
+    <div className="flex h-full bg-white overflow-hidden shadow-none relative">
       {/* 1. LEFT CONTACT LIST */}
-      <div className="w-80 lg:w-96 border-r border-slate-200 bg-white flex flex-col">
+      <div className={`w-full md:w-80 lg:w-96 border-r border-slate-200 bg-white flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-800">Messages</h2>
           <div className="h-6 w-6 bg-teal-50 rounded-full flex items-center justify-center text-teal-600 text-xs font-bold">
@@ -262,13 +262,23 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
       </div>
 
       {/* 2. RIGHT CHAT AREA */}
-      <div className="flex-1 flex flex-col bg-slate-50/50 relative">
+      <div className={`flex-1 flex flex-col bg-slate-50/50 relative ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur px-6 flex items-center justify-between z-10 sticky top-0">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-9 w-9 border border-slate-100">
+            <div className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur px-4 md:px-6 flex items-center justify-between z-10 sticky top-0">
+              <div className="flex items-center gap-2 md:gap-3">
+                {/* Back Button for Mobile */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-8 w-8 text-slate-500 hover:bg-slate-100 rounded-full"
+                  onClick={() => setActiveChat(null)}
+                >
+                  <ArrowLeft size={20} />
+                </Button>
+
+                <Avatar className="h-8 w-8 md:h-9 md:w-9 border border-slate-100">
                   {/* UPDATED: Prioritize custom profilePicture */}
                   <AvatarImage src={activeChat.profilePicture || activeChat.avatar} className="object-cover" />
                   <AvatarFallback className="bg-teal-100 text-teal-700 font-bold">{activeChat.name.charAt(0)}</AvatarFallback>

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
+import { MobileNav } from "@/components/shared/MobileNav";
 
 
 
@@ -537,6 +538,7 @@ export default function DoctorSettingsPage() {
 
                     </div>
                 </div>
+                <MobileNav />
             </main>
         </div>
     );

@@ -1,6 +1,7 @@
 "use client";
 
 import PatientSidebar from "@/components/PatientSidebar";
+import { MobileNav } from "@/components/shared/MobileNav";
 import React from "react";
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
@@ -10,6 +11,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
             <div className="md:ml-64 min-h-screen">
                 {children}
             </div>
+            <MobileNav />
         </div>
     );
 }
