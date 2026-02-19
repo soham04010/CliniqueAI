@@ -55,7 +55,7 @@ const predictRisk = async (req, res) => {
     // 3. Save Record (Save the original raw inputs, not the formatted ones, for the frontend display)
     const recordData = {
       name,
-      inputs: inputs, 
+      inputs: inputs,
       prediction: aiResult
     };
 
@@ -88,11 +88,23 @@ const predictRisk = async (req, res) => {
         if (doctorUser) {
           recordData.doctor_id = doctorUser._id;
           console.log(`🔗 Patient [${name}] linked to Doctor [${doctorUser.name}]`);
+
+          // Persist the link in the Patient's User profile
+          await User.findByIdAndUpdate(userId, { primaryDoctorId: doctorUser._id });
+          console.log(`💾 Persisted Primary Doctor [${doctorUser.email}] for Patient [${userId}]`);
         } else {
           console.warn(`⚠️ Doctor email not found: ${req.body.doctor_email}`);
         }
       } else if (doctor_id) {
         recordData.doctor_id = doctor_id; // Legacy/Fallback
+      } else {
+        // Fallback: Check if patient already has a primary doctor
+        const User = require('../models/User');
+        const patientUser = await User.findById(userId);
+        if (patientUser && patientUser.primaryDoctorId) {
+          recordData.doctor_id = patientUser.primaryDoctorId;
+          console.log(`🔗 Auto-linked to existing Primary Doctor for record.`);
+        }
       }
     }
 
@@ -278,7 +290,7 @@ const simulateRisk = async (req, res) => {
   const { inputs } = req.body;
   try {
     const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
-    
+
     // 1. Format inputs before simulating
     const formattedInputs = formatInputsForAI(inputs);
     console.log(`🔗 Sending Simulate request to AI:`, formattedInputs);
@@ -309,7 +321,7 @@ const copilotRequest = async (req, res) => {
 
     const role = req.user.role || 'patient';
     const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
-    
+
     // FIX: Await the response and properly handle it inside the try block
     const response = await axios.post(`${aiUrl}/copilot`, { message, context, role });
     const aiReply = response.data.reply;
@@ -380,13 +392,13 @@ const updatePatientDetails = async (req, res) => {
     }
 
     // Apply the updates
-    if (gender) patientData.inputs.gender = gender; 
+    if (gender) patientData.inputs.gender = gender;
     if (age) patientData.inputs.age = Number(age);
     if (hypertension !== undefined) patientData.inputs.hypertension = Number(hypertension);
     if (heart_disease !== undefined) patientData.inputs.heart_disease = Number(heart_disease);
 
     if (smoking_history) {
-      patientData.inputs.smoking_history = smoking_history; 
+      patientData.inputs.smoking_history = smoking_history;
     }
 
     if (email) patientData.email = email;

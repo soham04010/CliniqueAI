@@ -34,4 +34,19 @@ const deleteChatHistory = async (req, res) => {
   }
 };
 
-module.exports = { getChatHistory, deleteChatHistory };
+const markMessagesAsRead = async (req, res) => {
+  const { otherId } = req.params;
+  const userId = req.user._id;
+
+  try {
+    await Message.updateMany(
+      { senderId: otherId, receiverId: userId, isRead: false },
+      { $set: { isRead: true } }
+    );
+    res.json({ message: "Messages marked as read" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getChatHistory, deleteChatHistory, markMessagesAsRead };

@@ -95,23 +95,35 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
     const handleReceiveMessage = (data: any) => {
       console.log("📩 New Message Received:", data);
 
-      // Ensure specific typing for comparison
       const msgSenderId = String(data.senderId);
       const activeChatId = activeChat ? String(activeChat._id) : null;
       const currentUserId = currentUser ? String(currentUser.id || currentUser._id) : null;
 
-      console.log(`🔎 Checking Match: Sender=${msgSenderId} vs Active=${activeChatId}`);
-
+      // 1. Update Messages if active
       if (activeChatId && msgSenderId === activeChatId) {
-        console.log("✅ Match! Updating UI...");
         setMessages((prev) => [...prev, { ...data, isMe: msgSenderId === currentUserId }]);
-
-        // Optional: Scroll to bottom immediately
         if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "smooth" });
-      } else {
-        console.log("⚠️ No Match or Inactive Chat. Message queued in background.");
-        // In a real app, you'd increment a logical unread count here
+        // Mark read on server immediately
+        api.put(`/chat/mark-read/${msgSenderId}`).catch(() => { });
       }
+
+      // 2. Update Contact List Metadata (Unread Count & Last Message)
+      setContacts(prev => {
+        return prev.map(c => {
+          if (c._id === msgSenderId) {
+            return {
+              ...c,
+              lastMessage: { message: data.message, timestamp: data.timestamp },
+              unreadCount: activeChatId === msgSenderId ? 0 : (c.unreadCount || 0) + 1
+            };
+          }
+          if (c._id === data.receiverId && msgSenderId === currentUserId) {
+            // Update last message for me if I sent it (for sorting)
+            return { ...c, lastMessage: { message: data.message, timestamp: data.timestamp } };
+          }
+          return c;
+        });
+      });
     };
 
     socket.on("connect", handleConnect);
@@ -132,7 +144,7 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
     };
   }, [activeChat, currentUser]);
 
-  // 3. HISTORY EFFECT
+  // 3. HISTORY EFFECT & MARK READ
   useEffect(() => {
     if (activeChat && currentUser) {
       const fetchHistory = async () => {
@@ -140,6 +152,12 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
           const cid = currentUser.id || currentUser._id;
           const { data } = await api.get(`/chat/${cid}/${activeChat._id}`);
           setMessages(data.map((m: any) => ({ ...m, isMe: String(m.senderId) === String(cid) })));
+
+          // MARK AS READ
+          await api.put(`/chat/mark-read/${activeChat._id}`);
+          setContacts(prev => prev.map(c =>
+            c._id === activeChat._id ? { ...c, unreadCount: 0 } : c
+          ));
         } catch (e) { console.error("History failed"); }
       };
       fetchHistory();
@@ -151,9 +169,17 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
   const sendMessage = () => {
     if (!message.trim() || !activeChat || !currentUser) return;
     const cid = currentUser.id || currentUser._id;
-    const data = { senderId: cid, receiverId: activeChat._id, message, senderName: currentUser.name };
+    const timestamp = new Date();
+    const data = { senderId: cid, receiverId: activeChat._id, message, senderName: currentUser.name, timestamp };
+
     socket.emit("send_message", data);
-    setMessages((prev) => [...prev, { ...data, isMe: true, timestamp: new Date() }]);
+    setMessages((prev) => [...prev, { ...data, isMe: true }]);
+
+    // Update contact list for immediate sorting
+    setContacts(prev => prev.map(c =>
+      c._id === activeChat._id ? { ...c, lastMessage: { message, timestamp } } : c
+    ));
+
     setMessage("");
   };
 
@@ -166,9 +192,13 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
     } catch (err) { console.error("Navigation error"); }
   };
 
-  const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredContacts = contacts
+    .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      const timeA = a.lastMessage?.timestamp ? new Date(a.lastMessage.timestamp).getTime() : 0;
+      const timeB = b.lastMessage?.timestamp ? new Date(b.lastMessage.timestamp).getTime() : 0;
+      return timeB - timeA;
+    });
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-full bg-slate-50 rounded-2xl">
@@ -209,9 +239,22 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">
                   <p className={`text-sm font-bold truncate ${activeChat?._id === contact._id ? "text-teal-900" : "text-slate-700"}`}>{contact.name}</p>
-                  <span className="text-[10px] text-slate-400 font-medium">10:30 AM</span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {contact.lastMessage?.timestamp ? new Date(contact.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:30 AM'}
+                  </span>
                 </div>
-                <p className="text-xs text-slate-500 truncate mt-0.5">{contact.role === 'doctor' ? 'Clinical Colleague' : 'Patient Inquiry'}</p>
+                <div className="flex justify-between items-center mt-0.5">
+                  <p className="text-xs text-slate-500 truncate flex-1 mr-2 italic">
+                    {contact.lastMessage?.message || (currentUser?.role === 'patient' && contact.role === 'doctor' ? 'Consulting Physician' :
+                      currentUser?.role === 'doctor' && contact.role === 'patient' ? 'Patient' :
+                        contact.role === 'doctor' ? 'Clinical Colleague' : 'User')}
+                  </p>
+                  {contact.unreadCount > 0 && (
+                    <span className="h-5 min-w-[20px] px-1 bg-[#00A884] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {contact.unreadCount}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}

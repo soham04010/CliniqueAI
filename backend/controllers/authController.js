@@ -221,6 +221,7 @@ const loginUser = async (req, res) => {
         profilePicture: user.profilePicture || user.avatar, // Prefer uploaded photo
         mobileNumber: user.mobileNumber,
         isMobileVerified: user.isMobileVerified,
+        primaryDoctorId: user.primaryDoctorId,
         token: generateToken(user._id),
       });
     } else {
@@ -519,6 +520,7 @@ const googleLogin = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        primaryDoctorId: user.primaryDoctorId,
         token: generateToken(user._id),
       });
     } else {

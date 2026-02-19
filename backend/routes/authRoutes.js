@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const multer = require('multer'); // Import Multer
 const User = require('../models/User');
@@ -92,12 +93,68 @@ router.get('/contacts', protect, async (req, res) => {
       if (msg.receiverId.toString() !== userId.toString()) chatIds.add(msg.receiverId.toString());
     });
 
-    // 3. Merge Unique IDs
-    const allContactIds = [...new Set([...clinicalIds.map(id => id.toString()), ...chatIds])];
+    // 3. Merge Unique IDs and Validate
+    const allContactIds = [...new Set([...clinicalIds.map(id => id.toString()), ...chatIds])]
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
 
-    // 4. Fetch User Details
-    const contacts = await User.find({ _id: { $in: allContactIds } })
-      .select('name _id role profilePicture avatar email phone');
+    // 4. Fetch User Details with Aggregation for Unread Counts and Last Message
+    const contacts = await User.aggregate([
+      { $match: { _id: { $in: allContactIds } } },
+      {
+        $lookup: {
+          from: 'messages',
+          let: { contactId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $and: [{ $eq: ['$senderId', '$$contactId'] }, { $eq: ['$receiverId', userId] }] },
+                    { $and: [{ $eq: ['$senderId', userId] }, { $eq: ['$receiverId', '$$contactId'] }] }
+                  ]
+                }
+              }
+            },
+            { $sort: { timestamp: -1 } },
+            { $limit: 1 }
+          ],
+          as: 'lastMessageArr'
+        }
+      },
+      {
+        $lookup: {
+          from: 'messages',
+          let: { contactId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$senderId', '$$contactId'] },
+                    { $eq: ['$receiverId', userId] },
+                    { $eq: ['$isRead', false] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'unreadMessages'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          role: 1,
+          profilePicture: 1,
+          avatar: 1,
+          email: 1,
+          phone: 1,
+          lastMessage: { $arrayElemAt: ['$lastMessageArr', 0] },
+          unreadCount: { $size: '$unreadMessages' }
+        }
+      }
+    ]);
 
     res.json(contacts);
   } catch (error) {

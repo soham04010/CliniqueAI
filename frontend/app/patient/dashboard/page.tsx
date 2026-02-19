@@ -153,12 +153,16 @@ export default function PatientDashboard() {
                     fullPatient = { ...localUser, ...records[0] };
                     setPatient(fullPatient);
 
+                    let linkedDoctorEmail = "";
+
                     // Fetch Doctor Details if linked
-                    if (fullPatient.doctor_id) {
+                    const doctorIdToFetch = fullPatient.doctor_id || localUser.primaryDoctorId;
+                    if (doctorIdToFetch) {
                         try {
-                            const { data: doctorData } = await api.get(`/auth/user/${fullPatient.doctor_id}`);
-                            if (doctorData && doctorData.name) {
-                                setDoctorName(doctorData.name);
+                            const { data: doctorData } = await api.get(`/auth/user/${doctorIdToFetch}`);
+                            if (doctorData) {
+                                if (doctorData.name) setDoctorName(doctorData.name);
+                                if (doctorData.email) linkedDoctorEmail = doctorData.email;
                             }
                         } catch (err) {
                             console.warn("Doctor fetch error", err);
@@ -181,12 +185,13 @@ export default function PatientDashboard() {
 
                             hypertension: String(fullPatient.inputs.hypertension || '0'),
                             heart_disease: String(fullPatient.inputs.heart_disease || '0'),
-                            glucose: fullPatient.inputs.blood_glucose_level || '',
-                            hba1c: fullPatient.inputs.HbA1c_level || '',
-                            bmi: fullPatient.inputs.bmi || '',
-                            // Keep doctor email if set
-                            doctor_email: prev.doctor_email
+                            glucose: String(fullPatient.inputs.blood_glucose_level || ''),
+                            hba1c: String(fullPatient.inputs.HbA1c_level || ''),
+                            bmi: String(fullPatient.inputs.bmi || ''),
+                            doctor_email: linkedDoctorEmail || prev.doctor_email
                         }));
+                    } else if (linkedDoctorEmail) {
+                        setVitalsForm(prev => ({ ...prev, doctor_email: linkedDoctorEmail }));
                     }
 
                     if (fullPatient.prediction) {
