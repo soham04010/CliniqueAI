@@ -49,7 +49,7 @@ export default function Header({
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
-    
+
     // Local state to handle instant updates from Settings page
     const [localImage, setLocalImage] = useState(doctorImage);
     const [localName, setLocalName] = useState(doctorName);
@@ -130,7 +130,7 @@ export default function Header({
     };
 
     return (
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 sticky top-0 z-40 transition-all duration-300">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 transition-all duration-300">
 
             {/* Left: Title or Search */}
             <div className="flex items-center gap-8 w-full max-w-3xl">
@@ -155,8 +155,8 @@ export default function Header({
             </div>
 
             {/* Right: Actions & Profile */}
-            <div className="flex items-center gap-6">
-                <div className="flex items-center gap-4 border-r border-slate-200 pr-6">
+            <div className="flex items-center gap-2 md:gap-6">
+                <div className="flex items-center gap-2 md:gap-4 border-r border-slate-200 pr-3 md:pr-6">
                     {rightAction && <div>{rightAction}</div>}
 
                     {/* Notifications Popover */}
