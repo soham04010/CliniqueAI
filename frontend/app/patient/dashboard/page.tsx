@@ -145,6 +145,7 @@ export default function PatientDashboard() {
 
             try {
                 const localUser = JSON.parse(userStr);
+                setPatient(localUser);
                 const { data: records } = await api.get(`/patients`);
                 let fullPatient = localUser;
 
