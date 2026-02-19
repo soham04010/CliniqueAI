@@ -7,14 +7,14 @@ import Header from "@/components/doctor/Header";
 import ChatBox from "@/components/ChatBox";
 import { Loader2 } from "lucide-react";
 
-// 1. Move all your original logic into this Inner Component
+// 1. Inner Component: Contains all the original logic that relies on searchParams
 function InboxContent() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [doctor, setDoctor] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   const searchParams = useSearchParams();
-  const chatWithId = searchParams.get('chatWith');
+  const chatWithId = searchParams.get('chatWith'); // This caused the error before
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -30,17 +30,15 @@ function InboxContent() {
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] text-slate-900 font-sans flex text-sm selection:bg-teal-100 selection:text-teal-900">
-
       {/* 1. SIDEBAR */}
       <Sidebar />
 
       {/* 2. MAIN AREA */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-
         {/* HEADER */}
         <Header
           doctorName={doctor?.name || ""}
-          // Pass the doctor's image if available
+          // Pass the doctor's image if available, falling back to avatar if needed
           doctorImage={doctor?.profilePicture || doctor?.avatar} 
           title="Inbox"
           subtitle="Patient consultations & internal messaging"
@@ -57,7 +55,7 @@ function InboxContent() {
   );
 }
 
-// 2. Export the Main Page wrapped in Suspense to fix the build error
+// 2. Default Export: Wraps the logic in Suspense to prevent the Next.js build error
 export default function DoctorInboxPage() {
   return (
     <Suspense 
