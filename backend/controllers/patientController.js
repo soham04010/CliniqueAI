@@ -365,6 +365,7 @@ const deletePatient = async (req, res) => {
 };
 
 // @desc    Update Patient Contact & Basic Info
+// @desc    Update Patient Contact & Basic Info
 const updatePatientDetails = async (req, res) => {
   try {
     const { id } = req.params;
@@ -373,20 +374,28 @@ const updatePatientDetails = async (req, res) => {
     const patientData = await PatientData.findById(id);
     if (!patientData) return res.status(404).json({ message: "Patient record not found" });
 
-    if (patientData.inputs) {
-      if (gender) patientData.inputs.gender = gender; // Keep as string for DB
-      if (age) patientData.inputs.age = Number(age);
-      if (hypertension !== undefined) patientData.inputs.hypertension = Number(hypertension);
-      if (heart_disease !== undefined) patientData.inputs.heart_disease = Number(heart_disease);
+    // FIX 1: Ensure the inputs object actually exists before we try to modify it
+    if (!patientData.inputs) {
+      patientData.inputs = {};
+    }
 
-      if (smoking_history) {
-        patientData.inputs.smoking_history = smoking_history; // Keep as string for DB
-      }
+    // Apply the updates
+    if (gender) patientData.inputs.gender = gender; 
+    if (age) patientData.inputs.age = Number(age);
+    if (hypertension !== undefined) patientData.inputs.hypertension = Number(hypertension);
+    if (heart_disease !== undefined) patientData.inputs.heart_disease = Number(heart_disease);
+
+    if (smoking_history) {
+      patientData.inputs.smoking_history = smoking_history; 
     }
 
     if (email) patientData.email = email;
     if (phone) patientData.phone = phone;
 
+    // FIX 2: Tell Mongoose explicitly that the nested 'inputs' object has been changed!
+    patientData.markModified('inputs');
+
+    // Now save to the database
     await patientData.save();
 
     let updatedPhone = phone;
@@ -437,7 +446,8 @@ const updatePatientDetails = async (req, res) => {
     res.json({ message: "Patient details updated successfully", data: responseData });
   } catch (error) {
     console.error("Update Error:", error);
-    res.status(500).json({ message: "Failed to update details" });
+    // FIX 3: Send the exact error message back to the frontend so we aren't guessing
+    res.status(500).json({ message: "Failed to update details", error: error.message });
   }
 };
 
