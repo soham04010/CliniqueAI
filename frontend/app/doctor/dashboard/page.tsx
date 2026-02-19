@@ -97,11 +97,14 @@ export default function DoctorDashboard() {
 
     try {
       const user = JSON.parse(userStr);
-      if (user.role !== "doctor") { router.push("/login"); return; }
+      if (user.role !== "doctor") {
+        router.push("/login");
+        return;
+      }
       setDoctorName(user.name);
       fetchPatients();
     } catch (e) {
-      localStorage.clear();
+      console.error("Local storage corruption:", e);
       router.push("/login");
     }
   }, [fetchPatients, router]);

@@ -19,4 +19,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Centralized 401 Handling (Session Persistence Fix)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== 'undefined' && error.response?.status === 401) {
+      localStorage.clear();
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
