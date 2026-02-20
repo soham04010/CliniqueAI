@@ -34,7 +34,7 @@ export default function PatientMessagesPage() {
     if (loading) return null;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 flex flex-col">
+        <div className="h-screen bg-[#F8FAFC] font-sans text-slate-900 flex flex-col overflow-hidden">
 
             {/* Header */}
             <header className="bg-white border-b border-slate-200 sticky top-0 z-30 flex-none">
@@ -58,7 +58,8 @@ export default function PatientMessagesPage() {
                                 <p className="text-xs text-slate-500">Patient ID: {patient?._id?.slice(-6).toUpperCase()}</p>
                             </div>
                             <Avatar className="h-9 w-9 border border-slate-200">
-                                <AvatarImage src={patient?.avatar} />
+                                {/* UPDATED: Prioritize profilePicture */}
+                                <AvatarImage src={patient?.profilePicture || patient?.avatar} className="object-cover" />
                                 <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{patient?.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>

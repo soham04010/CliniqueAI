@@ -1,20 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     Search,
     Bell,
-    Activity,
-    User,
     Settings,
     HelpCircle,
     LogOut,
-    CheckCircle,
-    X
 } from "lucide-react";
 import api from "@/lib/api";
-import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -33,6 +28,7 @@ import {
 
 interface HeaderProps {
     doctorName?: string;
+    doctorImage?: string; // Added Prop
     searchQuery?: string;
     setSearchQuery?: (query: string) => void;
     title?: string;
@@ -42,6 +38,7 @@ interface HeaderProps {
 
 export default function Header({
     doctorName = "Doctor",
+    doctorImage,
     searchQuery,
     setSearchQuery,
     title = "Dashboard",
@@ -53,6 +50,35 @@ export default function Header({
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
 
+    // Local state to handle instant updates from Settings page
+    const [localImage, setLocalImage] = useState(doctorImage);
+    const [localName, setLocalName] = useState(doctorName);
+
+    // 1. Sync with Local Storage (Instant Updates)
+    useEffect(() => {
+        const syncUser = () => {
+            const userStr = localStorage.getItem("user");
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    // Prioritize Cloudinary 'profilePicture', fallback to 'avatar'
+                    setLocalImage(user.profilePicture || user.avatar);
+                    setLocalName(user.name);
+                } catch (e) {
+                    console.error("Header parse error", e);
+                }
+            }
+        };
+
+        // Initial load
+        syncUser();
+
+        // Listen for updates from Settings page
+        window.addEventListener("storage", syncUser);
+        return () => window.removeEventListener("storage", syncUser);
+    }, []);
+
+    // 2. Fetch Notifications
     const fetchNotifications = async () => {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -62,7 +88,6 @@ export default function Header({
             setNotifications(data.notifications);
             setUnreadCount(data.unreadCount);
         } catch (error: any) {
-            // Silently fail on network errors during polling to avoid console spam
             if (error.code !== "ERR_NETWORK") {
                 console.warn("Failed to fetch notifications:", error.message);
             }
@@ -70,11 +95,10 @@ export default function Header({
     };
 
     useEffect(() => {
-        if (doctorName) fetchNotifications();
-        // Poll every 30 seconds
+        fetchNotifications();
         const interval = setInterval(fetchNotifications, 30000);
         return () => clearInterval(interval);
-    }, [doctorName]);
+    }, []);
 
     const handleMarkRead = async (id: string, link?: string) => {
         try {
@@ -106,11 +130,10 @@ export default function Header({
     };
 
     return (
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 sticky top-0 z-40 transition-all duration-300">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 transition-all duration-300">
 
             {/* Left: Title or Search */}
             <div className="flex items-center gap-8 w-full max-w-3xl">
-                {/* If title provided, show it */}
                 {title && (
                     <div className="hidden lg:block">
                         <h1 className="text-xl font-bold text-slate-800 tracking-tight">{title}</h1>
@@ -118,7 +141,6 @@ export default function Header({
                     </div>
                 )}
 
-                {/* Search Bar */}
                 {setSearchQuery && (
                     <div className="relative w-full max-w-md group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-500 transition-colors h-5 w-5" />
@@ -133,9 +155,8 @@ export default function Header({
             </div>
 
             {/* Right: Actions & Profile */}
-            <div className="flex items-center gap-6">
-                <div className="flex items-center gap-4 border-r border-slate-200 pr-6">
-                    {/* Right Action Prop */}
+            <div className="flex items-center gap-2 md:gap-6">
+                <div className="flex items-center gap-2 md:gap-4 border-r border-slate-200 pr-3 md:pr-6">
                     {rightAction && <div>{rightAction}</div>}
 
                     {/* Notifications Popover */}
@@ -182,7 +203,6 @@ export default function Header({
                                             <Bell className="h-6 w-6 text-slate-300" />
                                         </div>
                                         <p className="text-sm font-bold text-slate-700">No new notifications</p>
-                                        <p className="text-xs text-slate-400 mt-1">We'll notify you when something important happens.</p>
                                     </div>
                                 )}
                             </div>
@@ -193,14 +213,14 @@ export default function Header({
                             )}
                         </PopoverContent>
                     </Popover>
-
                 </div>
 
                 {/* Profile Dropdown */}
                 <div className="flex items-center gap-4">
                     <div className="text-right hidden md:block">
                         <p className="text-sm font-bold text-slate-800">
-                            Dr. {doctorName.replace(/^Dr\.?\s*/i, "").split(" ")[0]}
+                            {/* Uses localName for instant updates */}
+                            Dr. {(localName || "Doctor").replace(/^Dr\.?\s*/i, "").split(" ")[0]}
                         </p>
                         <p className="text-xs text-slate-500 font-medium">Cardiologist</p>
                     </div>
@@ -208,8 +228,10 @@ export default function Header({
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Avatar className="h-11 w-11 border-2 border-white ring-2 ring-slate-100 cursor-pointer hover:ring-teal-100 transition-all">
+                                {/* UPDATED: Uses localImage logic */}
+                                <AvatarImage src={localImage || undefined} className="object-cover" />
                                 <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white font-bold text-lg">
-                                    {doctorName.replace(/^Dr\.?\s*/i, "").charAt(0)}
+                                    {(localName || "D").replace(/^Dr\.?\s*/i, "").charAt(0)}
                                 </AvatarFallback>
                             </Avatar>
                         </DropdownMenuTrigger>

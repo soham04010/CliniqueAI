@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
+import { MobileNav } from "@/components/shared/MobileNav";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,57 +247,69 @@ export default function PatientsPage() {
                                 <div
                                     key={patient._id}
                                     onClick={() => router.push(`/doctor/patients/${patient._id}`)}
-                                    className="group flex items-center p-4 bg-white rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:border-blue-100 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden"
+                                    className="group flex flex-col md:flex-row md:items-center p-4 bg-white rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:border-blue-100 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden"
                                 >
                                     {/* Hover Strip */}
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                                    {/* NAME */}
-                                    <div className="flex-1 flex items-center gap-4 pl-2">
-                                        <Avatar className="h-12 w-12 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform bg-white">
-                                            <AvatarFallback className="font-bold text-slate-600 bg-slate-50">{patient.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-bold text-slate-800 text-[15px] group-hover:text-blue-700 transition-colors">{patient.name}</p>
-                                            <p className="text-xs text-slate-400 font-medium font-mono">ID: {patient._id.slice(-6).toUpperCase()}</p>
+                                    <div className="flex items-center justify-between w-full md:w-auto md:flex-1">
+                                        {/* NAME */}
+                                        <div className="flex items-center gap-4 pl-2">
+                                            <Avatar className="h-10 w-10 md:h-12 md:w-12 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform bg-white">
+                                                <AvatarFallback className="font-bold text-slate-600 bg-slate-50">{patient.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-sm md:text-[15px] group-hover:text-blue-700 transition-colors">{patient.name}</p>
+                                                <p className="text-[10px] text-slate-400 font-medium font-mono">ID: {patient._id.slice(-6).toUpperCase()}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Mobile Risk Indicator */}
+                                        <div className="md:hidden">
+                                            <div className={`p-1.5 rounded-full border ${patient.prediction?.riskLevel === 'High' ? 'bg-red-50 border-red-100 text-red-500' : 'bg-emerald-50 border-emerald-100 text-emerald-500'}`}>
+                                                <Activity size={14} />
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* STATUS */}
-                                    <div className="w-40 flex justify-center">
-                                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${patient.prediction?.riskLevel === 'High'
-                                            ? 'bg-red-50 text-red-700 border-red-100'
-                                            : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                            }`}>
-                                            <span className={`h-2 w-2 rounded-full ${patient.prediction?.riskLevel === 'High' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
-                                            {patient.prediction?.riskLevel || "Low"} Risk
+                                    <div className="flex flex-wrap md:flex-nowrap items-center w-full md:w-auto mt-4 md:mt-0 gap-4 md:gap-0">
+                                        {/* STATUS */}
+                                        <div className="flex-1 md:w-40 flex justify-start md:justify-center">
+                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold border ${patient.prediction?.riskLevel === 'High'
+                                                ? 'bg-red-50 text-red-700 border-red-100'
+                                                : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                }`}>
+                                                <span className={`h-1.5 w-1.5 md:h-2 md:w-2 rounded-full ${patient.prediction?.riskLevel === 'High' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+                                                {patient.prediction?.riskLevel || "Low"} Risk
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* CONTACT */}
-                                    <div className="w-64 flex flex-col gap-1 text-center md:text-left pl-8">
-                                        <div className="flex items-center gap-2 text-slate-500 text-xs">
-                                            <Mail size={12} className="text-slate-400" />
-                                            <span className="truncate">{patient.email || "No email"}</span>
+                                        {/* CONTACT */}
+                                        <div className="w-full md:w-64 flex flex-col md:flex-col gap-1 text-left md:pl-8 py-2 md:py-0 border-t md:border-t-0 border-slate-50">
+                                            <div className="flex items-center gap-2 text-slate-500 text-xs">
+                                                <Mail size={12} className="text-slate-400" />
+                                                <span className="truncate">{patient.email || "No email"}</span>
+                                            </div>
+                                            <div className="hidden md:flex items-center gap-2 text-slate-500 text-xs">
+                                                <Phone size={12} className="text-slate-400" />
+                                                <span className="truncate">{patient.phone || "No phone"}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2 text-slate-500 text-xs">
-                                            <Phone size={12} className="text-slate-400" />
-                                            <span className="truncate">{patient.phone || "No phone"}</span>
-                                        </div>
-                                    </div>
 
-                                    {/* LAST VISIT */}
-                                    <div className="w-32 text-center text-slate-500 text-xs font-bold">
-                                        <div className="flex items-center justify-center gap-1.5 p-2 rounded-lg group-hover:bg-slate-50 transition-colors">
-                                            <Calendar size={14} className="text-slate-300 group-hover:text-slate-500" />
-                                            {new Date(patient.updatedAt || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                        {/* LAST VISIT */}
+                                        <div className="flex-none w-auto md:w-32 text-right md:text-center text-slate-500 text-[10px] md:text-xs font-bold ml-auto md:ml-0">
+                                            <div className="flex items-center justify-center gap-1.5 p-1.5 md:p-2 rounded-lg group-hover:bg-slate-50 transition-colors">
+                                                <Calendar size={12} className="text-slate-300 md:hidden" />
+                                                <span className="md:hidden">Last: </span>
+                                                {new Date(patient.updatedAt || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* ACTION */}
-                                    <div className="w-16 flex justify-end pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                                            <ChevronRight size={16} />
+                                        {/* ACTION */}
+                                        <div className="hidden md:flex w-16 justify-end pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+                                                <ChevronRight size={16} />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -306,6 +319,7 @@ export default function PatientsPage() {
                     </div>
 
                 </div>
+                <MobileNav />
             </main>
         </div>
     );

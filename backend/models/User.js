@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid'); // Make sure to npm install uuid
+const { v4: uuidv4 } = require('uuid');
 
 const userSchema = new mongoose.Schema({
   uid: {
@@ -16,12 +16,20 @@ const userSchema = new mongoose.Schema({
     default: 'patient'
   },
   specialization: { type: String }, // For doctors
+  primaryDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // For patients: Linked Doctor
 
   // Profile Fields
-  phone: { type: String },
+  phone: { type: String }, // Old field (kept for backward compatibility)
+  mobileNumber: { type: String }, // NEW: Verified Mobile Number
+  isMobileVerified: { type: Boolean, default: false }, // NEW
+
   bio: { type: String },
   clinicName: { type: String },
   license: { type: String },
+
+  // Profile Picture (Cloudinary URL)
+  avatar: { type: String }, // Used by Google Auth
+  profilePicture: { type: String }, // NEW: Custom Uploaded Photo
 
   // 2FA Fields
   twoFactorEnabled: { type: Boolean, default: false },
@@ -39,7 +47,6 @@ const userSchema = new mongoose.Schema({
 
   // Google Auth
   googleId: String,
-  avatar: String,
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

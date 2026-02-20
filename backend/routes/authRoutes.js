@@ -1,7 +1,9 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
+const multer = require('multer'); // Import Multer
 const User = require('../models/User');
-const PatientData = require('../models/PatientData'); // Required for relationship logic
+const PatientData = require('../models/PatientData');
 const {
   registerUser,
   loginUser,
@@ -14,24 +16,44 @@ const {
   verifyLoginOTP,
   googleLogin,
   requestPhoneChangeOtp,
-  verifyPhoneChangeOtp
+  verifyPhoneChangeOtp,
+  requestPasswordChangeOtp, // NEW Import
+  updatePasswordSecure      // NEW Import
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
+// 1. CONFIGURE MULTER (Memory Storage for Cloudinary)
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Public Routes
 router.post('/register', registerUser);
 router.post('/verify-otp', verifyOTP);
 router.post('/login', loginUser);
-router.post('/google', googleLogin); // Google Auth Route
+router.post('/google', googleLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.put('/profile', protect, updateProfile);
-router.put('/password', protect, updatePassword);
-router.put('/2fa', protect, toggle2FA);
 router.post('/login-otp', verifyLoginOTP);
-router.post('/request-phone-otp', protect, requestPhoneChangeOtp);
-router.put('/update-phone', protect, verifyPhoneChangeOtp);
+router.post('/login-otp', verifyLoginOTP);
+// router.get('/fix-role/:email', ...); // Removed
 
-// Route for the initial "Select Doctor" dropdown in the test form
+// Protected Routes
+// NOTE: We added upload.single('profilePicture') here to handle the image file
+router.put('/profile', protect, upload.single('profilePicture'), updateProfile);
+
+router.put('/password', protect, updatePassword); // Old simple password update
+router.put('/2fa', protect, toggle2FA);
+
+// NEW: Secure Password Change Routes
+router.post('/request-password-otp', protect, requestPasswordChangeOtp);
+router.put('/update-password-secure', protect, updatePasswordSecure);
+
+// NEW: Phone Verification Routes
+// WhatsApp OTP Routes
+router.post('/request-whatsapp-otp', protect, require('../controllers/authController').requestWhatsAppOtp);
+router.put('/verify-whatsapp-otp', protect, require('../controllers/authController').verifyWhatsAppOtp);
+
+// Route for the initial "Select Doctor" dropdown
 router.get('/doctors', protect, async (req, res) => {
   try {
     const doctors = await User.find({ role: 'doctor' }).select('name _id');
@@ -41,28 +63,107 @@ router.get('/doctors', protect, async (req, res) => {
   }
 });
 
-// NEW: Restricted Contact List for the WhatsApp-style Inbox
+// Restricted Contact List for Chat
 router.get('/contacts', protect, async (req, res) => {
   try {
     const userId = req.user._id;
     const role = req.user.role;
 
+    const Message = require('../models/Message'); // Import Message Model
+
+    // 1. Fetch Clinical Links (Existing Logic)
+    let clinicalIds = [];
     if (role === 'patient') {
-      // Patients: Find doctors they have actually assigned a test to
       const distinctDoctorIds = await PatientData.distinct('doctor_id', { patient_id: userId });
-      const validDoctorIds = distinctDoctorIds.filter(id => id != null);
-      const doctors = await User.find({ _id: { $in: validDoctorIds } }).select('name _id role');
-      res.json(doctors);
+      clinicalIds = distinctDoctorIds.filter(id => id != null);
     } else {
-      // Doctors: Find patients who have performed a test under their ID
       const distinctPatientIds = await PatientData.distinct('patient_id', { doctor_id: userId });
-      const validPatientIds = distinctPatientIds.filter(id => id != null);
-      const patients = await User.find({ _id: { $in: validPatientIds } }).select('name _id role');
-      res.json(patients);
+      clinicalIds = distinctPatientIds.filter(id => id != null);
     }
+
+    // 2. Fetch Chat History Links (New Logic)
+    // Find all users who have sent messages TO me or received messages FROM me
+    const messages = await Message.find({
+      $or: [{ senderId: userId }, { receiverId: userId }]
+    }).select('senderId receiverId');
+
+    const chatIds = new Set();
+    messages.forEach(msg => {
+      if (msg.senderId.toString() !== userId.toString()) chatIds.add(msg.senderId.toString());
+      if (msg.receiverId.toString() !== userId.toString()) chatIds.add(msg.receiverId.toString());
+    });
+
+    // 3. Merge Unique IDs and Validate
+    const allContactIds = [...new Set([...clinicalIds.map(id => id.toString()), ...chatIds])]
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    // 4. Fetch User Details with Aggregation for Unread Counts and Last Message
+    const contacts = await User.aggregate([
+      { $match: { _id: { $in: allContactIds } } },
+      {
+        $lookup: {
+          from: 'messages',
+          let: { contactId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $and: [{ $eq: ['$senderId', '$$contactId'] }, { $eq: ['$receiverId', userId] }] },
+                    { $and: [{ $eq: ['$senderId', userId] }, { $eq: ['$receiverId', '$$contactId'] }] }
+                  ]
+                }
+              }
+            },
+            { $sort: { timestamp: -1 } },
+            { $limit: 1 }
+          ],
+          as: 'lastMessageArr'
+        }
+      },
+      {
+        $lookup: {
+          from: 'messages',
+          let: { contactId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$senderId', '$$contactId'] },
+                    { $eq: ['$receiverId', userId] },
+                    { $eq: ['$isRead', false] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'unreadMessages'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          role: 1,
+          profilePicture: 1,
+          avatar: 1,
+          email: 1,
+          phone: 1,
+          lastMessage: { $arrayElemAt: ['$lastMessageArr', 0] },
+          unreadCount: { $size: '$unreadMessages' }
+        }
+      }
+    ]);
+
+    res.json(contacts);
   } catch (error) {
+    console.error("Contacts Fetch Error:", error);
     res.status(500).json({ message: error.message });
   }
 });
+
+// Get Public User Profile
+router.get('/user/:id', protect, require('../controllers/authController').getUserPublicProfile);
 
 module.exports = router;

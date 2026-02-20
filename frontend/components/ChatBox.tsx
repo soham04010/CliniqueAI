@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { Send, MessageSquare, Loader2, User as UserIcon, ExternalLink, Search } from "lucide-react";
+import { Send, MessageSquare, Loader2, User as UserIcon, ExternalLink, Trash2, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import api from "@/lib/api";
 
@@ -16,10 +15,11 @@ interface ChatBoxProps {
   senderName?: string;
   receiverId?: string;
   receiverName?: string;
-  searchQuery?: string; // New Prop
+  searchQuery?: string;
+  initialChatId?: string | null;
 }
 
-export default function ChatBox({ senderId, receiverId, receiverName, searchQuery = "" }: ChatBoxProps) {
+export default function ChatBox({ senderId, receiverId, receiverName, searchQuery = "", initialChatId }: ChatBoxProps) {
   const router = useRouter();
   const [activeChat, setActiveChat] = useState<any>(receiverId ? { _id: receiverId, name: receiverName } : null);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -29,6 +29,7 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
   const [currentUser, setCurrentUser] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 1. INIT EFFECT (User & Contacts) - Runs once
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
@@ -38,29 +39,125 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
     }
 
     const fetchContacts = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("⚠️ No token found. Skipping contacts fetch.");
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data } = await api.get("/auth/contacts");
         setContacts(data);
-      } catch (e) { console.error("Failed to load contacts", e); }
-      finally { setLoading(false); }
+
+        // AUTO-SELECT CHAT if initialChatId is present
+        if (initialChatId) {
+          const targetContact = data.find((c: any) => c._id === initialChatId);
+          if (targetContact) {
+            setActiveChat(targetContact);
+          }
+        }
+      } catch (e: any) {
+        console.error("❌ Failed to load contacts:", e.response?.status, e.message);
+        if (e.response?.status === 401) {
+          // Optional: Redirect to login if 401 persists
+          // router.push('/login');
+        }
+      } finally {
+        setLoading(false);
+      }
     };
     fetchContacts();
+  }, [initialChatId]);
 
-    socket.on("receive_message", (data) => {
-      if (activeChat && data.senderId === activeChat._id) {
-        setMessages((prev) => [...prev, data]);
+  // 2. SOCKET EFFECT - Runs when activeChat changes
+  // 2. SOCKET CONNECTION & HANDLERS
+  useEffect(() => {
+    // A. Re-join room on reconnection (Fixes "Network Blip" issue)
+    const handleConnect = () => {
+      console.log("🔌 Socket Connected:", socket.id);
+      if (currentUser) {
+        const userId = currentUser.id || currentUser._id;
+        console.log("➡️ Re-joining Room:", userId);
+        socket.emit("join_room", userId);
       }
-    });
-    return () => { socket.off("receive_message"); };
-  }, [activeChat]);
+    };
 
+    const handleDisconnect = (reason: any) => {
+      console.warn("⚠️ Socket Disconnected:", reason);
+    };
+
+    const handleConnectError = (error: any) => {
+      console.error("❌ Socket Connection Error:", error);
+    };
+
+    // B. Handle Incoming Messages
+    const handleReceiveMessage = (data: any) => {
+      console.log("📩 New Message Received:", data);
+
+      const msgSenderId = String(data.senderId);
+      const activeChatId = activeChat ? String(activeChat._id) : null;
+      const currentUserId = currentUser ? String(currentUser.id || currentUser._id) : null;
+
+      // 1. Update Messages if active
+      if (activeChatId && msgSenderId === activeChatId) {
+        setMessages((prev) => [...prev, { ...data, isMe: msgSenderId === currentUserId }]);
+        if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "smooth" });
+        // Mark read on server immediately
+        api.put(`/chat/mark-read/${msgSenderId}`).catch(() => { });
+      }
+
+      // 2. Update Contact List Metadata (Unread Count & Last Message)
+      setContacts(prev => {
+        return prev.map(c => {
+          if (c._id === msgSenderId) {
+            return {
+              ...c,
+              lastMessage: { message: data.message, timestamp: data.timestamp },
+              unreadCount: activeChatId === msgSenderId ? 0 : (c.unreadCount || 0) + 1
+            };
+          }
+          if (c._id === data.receiverId && msgSenderId === currentUserId) {
+            // Update last message for me if I sent it (for sorting)
+            return { ...c, lastMessage: { message: data.message, timestamp: data.timestamp } };
+          }
+          return c;
+        });
+      });
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("receive_message", handleReceiveMessage);
+
+    // Initial Join (if already connected but component remounted)
+    if (socket.connected && currentUser) {
+      handleConnect();
+    }
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("receive_message", handleReceiveMessage);
+    };
+  }, [activeChat, currentUser]);
+
+  // 3. HISTORY EFFECT & MARK READ
   useEffect(() => {
     if (activeChat && currentUser) {
       const fetchHistory = async () => {
         try {
           const cid = currentUser.id || currentUser._id;
           const { data } = await api.get(`/chat/${cid}/${activeChat._id}`);
-          setMessages(data.map((m: any) => ({ ...m, isMe: m.senderId === cid })));
+          setMessages(data.map((m: any) => ({ ...m, isMe: String(m.senderId) === String(cid) })));
+
+          // MARK AS READ
+          await api.put(`/chat/mark-read/${activeChat._id}`);
+          setContacts(prev => prev.map(c =>
+            c._id === activeChat._id ? { ...c, unreadCount: 0 } : c
+          ));
         } catch (e) { console.error("History failed"); }
       };
       fetchHistory();
@@ -72,9 +169,17 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
   const sendMessage = () => {
     if (!message.trim() || !activeChat || !currentUser) return;
     const cid = currentUser.id || currentUser._id;
-    const data = { senderId: cid, receiverId: activeChat._id, message, senderName: currentUser.name };
+    const timestamp = new Date();
+    const data = { senderId: cid, receiverId: activeChat._id, message, senderName: currentUser.name, timestamp };
+
     socket.emit("send_message", data);
-    setMessages((prev) => [...prev, { ...data, isMe: true, timestamp: new Date() }]);
+    setMessages((prev) => [...prev, { ...data, isMe: true }]);
+
+    // Update contact list for immediate sorting
+    setContacts(prev => prev.map(c =>
+      c._id === activeChat._id ? { ...c, lastMessage: { message, timestamp } } : c
+    ));
+
     setMessage("");
   };
 
@@ -87,10 +192,13 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
     } catch (err) { console.error("Navigation error"); }
   };
 
-  // Filter Contacts
-  const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredContacts = contacts
+    .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      const timeA = a.lastMessage?.timestamp ? new Date(a.lastMessage.timestamp).getTime() : 0;
+      const timeB = b.lastMessage?.timestamp ? new Date(b.lastMessage.timestamp).getTime() : 0;
+      return timeB - timeA;
+    });
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-full bg-slate-50 rounded-2xl">
@@ -100,9 +208,9 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
   );
 
   return (
-    <div className="flex h-full bg-white overflow-hidden shadow-none">
-      {/* 1. LEFT CONTACT LIST (Light Theme) */}
-      <div className="w-80 lg:w-96 border-r border-slate-200 bg-white flex flex-col">
+    <div className="flex h-full bg-white overflow-hidden shadow-none relative">
+      {/* 1. LEFT CONTACT LIST */}
+      <div className={`w-full md:w-80 lg:w-96 border-r border-slate-200 bg-white flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-800">Messages</h2>
           <div className="h-6 w-6 bg-teal-50 rounded-full flex items-center justify-center text-teal-600 text-xs font-bold">
@@ -119,34 +227,60 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
             >
               <div className="relative">
                 <Avatar className="h-10 w-10 border border-slate-100 shadow-sm">
+                  {/* UPDATED: Prioritize custom profilePicture */}
+                  <AvatarImage src={contact.profilePicture || contact.avatar} className="object-cover" />
                   <AvatarFallback className={`font-bold ${activeChat?._id === contact._id ? "bg-teal-100 text-teal-700" : "bg-slate-100 text-slate-500"}`}>
                     {contact.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                {/* Mock Online Status for Demo */}
                 <span className="absolute bottom-0 right-0 h-2.5 w-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">
                   <p className={`text-sm font-bold truncate ${activeChat?._id === contact._id ? "text-teal-900" : "text-slate-700"}`}>{contact.name}</p>
-                  <span className="text-[10px] text-slate-400 font-medium">10:30 AM</span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {contact.lastMessage?.timestamp ? new Date(contact.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:30 AM'}
+                  </span>
                 </div>
-                <p className="text-xs text-slate-500 truncate mt-0.5">{contact.role === 'doctor' ? 'Clinical Colleague' : 'Patient Inquiry'}</p>
+                <div className="flex justify-between items-center mt-0.5">
+                  <p className="text-xs text-slate-500 truncate flex-1 mr-2 italic">
+                    {contact.lastMessage?.message || (currentUser?.role === 'patient' && contact.role === 'doctor' ? 'Consulting Physician' :
+                      currentUser?.role === 'doctor' && contact.role === 'patient' ? 'Patient' :
+                        contact.role === 'doctor' ? 'Clinical Colleague' : 'User')}
+                  </p>
+                  {contact.unreadCount > 0 && (
+                    <span className="h-5 min-w-[20px] px-1 bg-[#00A884] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {contact.unreadCount}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* 2. RICHT CHAT AREA (Light Theme) */}
-      <div className="flex-1 flex flex-col bg-slate-50/50 relative">
+      {/* 2. RIGHT CHAT AREA */}
+      <div className={`flex-1 flex flex-col bg-slate-50/50 relative ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur px-6 flex items-center justify-between z-10 sticky top-0">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-9 w-9 border border-slate-100">
+            <div className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur px-4 md:px-6 flex items-center justify-between z-10 sticky top-0">
+              <div className="flex items-center gap-2 md:gap-3">
+                {/* Back Button for Mobile */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-8 w-8 text-slate-500 hover:bg-slate-100 rounded-full"
+                  onClick={() => setActiveChat(null)}
+                >
+                  <ArrowLeft size={20} />
+                </Button>
+
+                <Avatar className="h-8 w-8 md:h-9 md:w-9 border border-slate-100">
+                  {/* UPDATED: Prioritize custom profilePicture */}
+                  <AvatarImage src={activeChat.profilePicture || activeChat.avatar} className="object-cover" />
                   <AvatarFallback className="bg-teal-100 text-teal-700 font-bold">{activeChat.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -159,22 +293,38 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
               </div>
 
               {currentUser?.role === 'doctor' && (
-                <Button onClick={handleViewPatientInfo} size="sm" variant="outline" className="h-8 border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 text-[10px] font-bold uppercase tracking-wider rounded-lg gap-1.5">
+                <Button onClick={handleViewPatientInfo} size="sm" variant="outline" className="h-8 border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 text-[10px] font-bold uppercase tracking-wider rounded-lg gap-1.5 mr-2">
                   <ExternalLink size={12} /> Patient Chart
                 </Button>
               )}
+              <Button
+                onClick={async () => {
+                  try {
+                    const cid = currentUser.id || currentUser._id;
+                    await api.delete(`/chat/${cid}/${activeChat._id}`);
+                    setMessages([]); // Clear local messages
+                    // alert("Chat history deleted."); // Optional: Use toast
+                  } catch (e) { console.error("Failed to delete chat", e); }
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                title="Delete Conversation"
+              >
+                <Trash2 size={16} />
+              </Button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#F0F2F5] min-h-0">
               {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.isMe ? "justify-end" : "justify-start"} mb-4`}>
-                  <div className={`max-w-[75%] p-4 rounded-2xl text-sm shadow-md relative group transition-all duration-200 hover:shadow-lg ${msg.isMe
-                    ? "bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-tr-sm shadow-teal-500/20"
-                    : "bg-white text-slate-700 rounded-tl-sm border border-slate-100/50 shadow-slate-200/50"
+                <div key={i} className={`flex ${msg.isMe ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] sm:max-w-[70%] p-3 px-4 rounded-2xl text-[15px] shadow-sm relative group transition-all duration-200 ${msg.isMe
+                    ? "bg-[#005C4B] text-white rounded-tr-none shadow-md"
+                    : "bg-white text-slate-800 rounded-tl-none shadow-sm"
                     }`}>
-                    <p className="leading-relaxed">{msg.message}</p>
-                    <p className={`text-[10px] mt-2 font-medium opacity-70 ${msg.isMe ? "text-teal-100/80 text-right" : "text-slate-400 text-left"}`}>
+                    <p className="leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                    <p className={`text-[10px] mt-1 font-medium ${msg.isMe ? "text-white/70 text-right" : "text-slate-400 text-left"}`}>
                       {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -184,21 +334,34 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white/50 border-t border-slate-100 backdrop-blur-sm">
-              <div className="flex gap-3 items-end max-w-4xl mx-auto">
-                <div className="flex-1 relative bg-white rounded-2xl shadow-sm border border-slate-200 focus-within:border-teal-400 focus-within:ring-4 focus-within:ring-teal-500/10 transition-all duration-300">
-                  <Input
+            <div className="p-3 bg-[#F0F2F5] border-t border-slate-200">
+              <div className="flex gap-2 items-end max-w-4xl mx-auto w-full">
+                <div className="flex-1 relative bg-white rounded-2xl shadow-sm border border-slate-200 focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 transition-all duration-200">
+                  <textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Type your message..."
-                    className="w-full bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 px-4 py-3 h-auto min-h-[44px] text-slate-700 placeholder:text-slate-400 resize-none rounded-2xl"
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    rows={1}
+                    className="w-full bg-transparent border-none focus:outline-none px-4 py-3 text-slate-800 placeholder:text-slate-400 resize-none max-h-[150px] min-h-[44px] block"
+                    style={{ height: 'auto', overflowY: message.split('\n').length > 5 ? 'auto' : 'hidden' }}
                   />
                 </div>
                 <Button
                   onClick={sendMessage}
                   disabled={!message.trim()}
-                  className="h-11 w-11 p-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-lg shadow-teal-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none"
+                  className="h-11 w-11 p-0 rounded-full bg-[#005C4B] hover:bg-[#004a3c] text-white shadow-lg shadow-teal-900/10 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none flex-none mb-0.5"
                 >
                   <Send className="h-5 w-5 ml-0.5" />
                 </Button>

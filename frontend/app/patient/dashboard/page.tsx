@@ -52,8 +52,10 @@ export default function PatientDashboard() {
         heart_disease: '0',
         glucose: '',
         hba1c: '',
-        bmi: ''
+        bmi: '',
+        doctor_email: ''
     });
+    const [doctorName, setDoctorName] = useState<string | null>(null);
 
     const handleUpdateVitals = async () => {
         setLoading(true);
@@ -101,7 +103,8 @@ export default function PatientDashboard() {
             const { data: newRecord } = await api.post('/patients/predict', {
                 name: patient.name,
                 inputs: newInputs,
-                doctor_id: patient.doctor_id
+                doctor_id: patient.doctor_id,
+                doctor_email: vitalsForm.doctor_email // Send email for lookup
             });
 
             setPatient({ ...patient, ...newRecord });
@@ -142,6 +145,7 @@ export default function PatientDashboard() {
 
             try {
                 const localUser = JSON.parse(userStr);
+                setPatient(localUser);
                 const { data: records } = await api.get(`/patients`);
                 let fullPatient = localUser;
 
@@ -149,9 +153,26 @@ export default function PatientDashboard() {
                     fullPatient = { ...localUser, ...records[0] };
                     setPatient(fullPatient);
 
+                    let linkedDoctorEmail = "";
+
+                    // Fetch Doctor Details if linked
+                    const doctorIdToFetch = fullPatient.doctor_id || localUser.primaryDoctorId;
+                    if (doctorIdToFetch) {
+                        try {
+                            const { data: doctorData } = await api.get(`/auth/user/${doctorIdToFetch}`);
+                            if (doctorData) {
+                                if (doctorData.name) setDoctorName(doctorData.name);
+                                if (doctorData.email) linkedDoctorEmail = doctorData.email;
+                            }
+                        } catch (err) {
+                            console.warn("Doctor fetch error", err);
+                        }
+                    }
+
                     // Initialize form with current values
                     if (fullPatient.inputs) {
-                        setVitalsForm({
+                        setVitalsForm(prev => ({
+                            ...prev,
                             age: fullPatient.inputs.age || '',
                             gender: fullPatient.inputs.gender === 1 ? 'Male' : (fullPatient.inputs.gender === 0 ? 'Female' : 'Male'),
 
@@ -164,10 +185,13 @@ export default function PatientDashboard() {
 
                             hypertension: String(fullPatient.inputs.hypertension || '0'),
                             heart_disease: String(fullPatient.inputs.heart_disease || '0'),
-                            glucose: fullPatient.inputs.blood_glucose_level || '',
-                            hba1c: fullPatient.inputs.HbA1c_level || '',
-                            bmi: fullPatient.inputs.bmi || ''
-                        });
+                            glucose: String(fullPatient.inputs.blood_glucose_level || ''),
+                            hba1c: String(fullPatient.inputs.HbA1c_level || ''),
+                            bmi: String(fullPatient.inputs.bmi || ''),
+                            doctor_email: linkedDoctorEmail || prev.doctor_email
+                        }));
+                    } else if (linkedDoctorEmail) {
+                        setVitalsForm(prev => ({ ...prev, doctor_email: linkedDoctorEmail }));
                     }
 
                     if (fullPatient.prediction) {
@@ -220,89 +244,133 @@ export default function PatientDashboard() {
             <main className="max-w-5xl mx-auto px-6 py-8 space-y-8 animate-in fade-in duration-500">
 
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Good Morning, {patient?.name?.split(' ')[0] || 'Patient'}</h1>
-                        <p className="text-slate-500">Here is your health overview for today.</p>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Good Morning, {patient?.name?.split(' ')[0] || 'Patient'}</h1>
+                        <p className="text-slate-500 font-medium">Here is your health overview for today.</p>
                     </div>
 
-                    {/* Routine Vital Check Modal */}
-                    <Dialog open={isVitalsOpen} onOpenChange={setIsVitalsOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 rounded-xl px-6 font-bold tracking-wide transition-all hover:scale-105 active:scale-95">
-                                <Activity className="h-4 w-4 mr-2" />
-                                ROUTINE VITAL CHECK
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[480px] rounded-[2rem] bg-white text-slate-900 border-slate-100 shadow-2xl shadow-indigo-900/10 p-0 overflow-hidden">
-                            <DialogTitle className="sr-only">Routine Vital Check</DialogTitle>
+                    <div className="flex items-center gap-3">
+                        {/* Care Team / Doctor Status */}
+                        <div className={`hidden md:flex items-center gap-3 px-4 py-2 rounded-xl border ${vitalsForm.doctor_email ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${vitalsForm.doctor_email ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-200 text-slate-500'}`}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                            </div>
+                            <div className="text-xs">
+                                <p className="font-bold uppercase tracking-wider opacity-70">Care Team</p>
+                                <p className="font-semibold">{doctorName || (vitalsForm.doctor_email ? 'Dr. Assigned' : 'No Doctor')}</p>
+                            </div>
+                        </div>
+
+                        {/* Routine Vital Check Modal */}
+                        <Dialog open={isVitalsOpen} onOpenChange={setIsVitalsOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 rounded-xl px-6 font-bold tracking-wide transition-all hover:scale-105 active:scale-95">
+                                    <Activity className="h-4 w-4 mr-2" />
+                                    ROUTINE VITAL CHECK
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[480px] rounded-[2rem] bg-white text-slate-900 border-slate-100 shadow-2xl shadow-indigo-900/10 p-0 overflow-hidden">
+                                <DialogTitle className="sr-only">Routine Vital Check</DialogTitle>
 
 
-                            <div className="p-6 space-y-6">
-                                {/* Physician Info */}
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consulting Physician</Label>
-                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
-                                            DR
-                                        </div>
-                                        <div className="text-sm font-semibold text-slate-700">
-                                            {patient?.doctor_id || 'Dr. Assigned Panel'}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Personal Stats Grid */}
-                                <div className="grid grid-cols-2 gap-5">
-                                    <div className="space-y-3">
-                                        <Label htmlFor="age" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Age</Label>
-                                        <div className="flex items-center justify-between bg-white p-1 rounded-2xl border border-slate-200 shadow-sm h-14">
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                onClick={() => setVitalsForm(prev => ({ ...prev, age: String(Math.max(0, Number(prev.age) - 1)) }))}
-                                                className="h-12 w-14 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                                            >
-                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </Button>
-
-                                            <div className="flex flex-col items-center justify-center -space-y-0.5 px-2">
-                                                <input
-                                                    id="age"
-                                                    type="number"
-                                                    value={vitalsForm.age}
-                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, age: e.target.value })}
-                                                    className="bg-transparent border-none text-center text-xl font-black text-slate-900 focus:outline-none focus:ring-0 p-0 h-7 w-20 [&::-webkit-inner-spin-button]:appearance-none"
-                                                    placeholder="--"
+                                <div className="p-6 space-y-6">
+                                    {/* Physician Info */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consulting Physician (Email)</Label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative flex-1">
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500">
+                                                    <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold">DR</div>
+                                                </div>
+                                                <Input
+                                                    placeholder="Enter Doctor's Email..."
+                                                    value={vitalsForm.doctor_email}
+                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, doctor_email: e.target.value })}
+                                                    className="pl-11 bg-slate-50 border-slate-200 focus:bg-white transition-all"
                                                 />
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Years</span>
                                             </div>
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 font-medium px-1">
+                                            Connect with your doctor to share these results instantly.
+                                        </p>
+                                    </div>
 
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                onClick={() => setVitalsForm(prev => ({ ...prev, age: String(Number(prev.age) + 1) }))}
-                                                className="h-12 w-14 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                                            >
-                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </Button>
+                                    {/* Personal Stats Grid */}
+                                    <div className="grid grid-cols-2 gap-5">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="age" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Age</Label>
+                                            <div className="flex items-center justify-between bg-white p-1 rounded-2xl border border-slate-200 shadow-sm h-14">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => setVitalsForm(prev => ({ ...prev, age: String(Math.max(0, Number(prev.age) - 1)) }))}
+                                                    className="h-12 w-14 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                                >
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </Button>
+
+                                                <div className="flex flex-col items-center justify-center -space-y-0.5 px-2">
+                                                    <input
+                                                        id="age"
+                                                        type="number"
+                                                        value={vitalsForm.age}
+                                                        onChange={(e) => setVitalsForm({ ...vitalsForm, age: e.target.value })}
+                                                        className="bg-transparent border-none text-center text-xl font-black text-slate-900 focus:outline-none focus:ring-0 p-0 h-7 w-20 [&::-webkit-inner-spin-button]:appearance-none"
+                                                        placeholder="--"
+                                                    />
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Years</span>
+                                                </div>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => setVitalsForm(prev => ({ ...prev, age: String(Number(prev.age) + 1) }))}
+                                                    className="h-12 w-14 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                                >
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Label htmlFor="gender" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Gender</Label>
+                                            <div className="relative">
+                                                <select
+                                                    id="gender"
+                                                    value={vitalsForm.gender}
+                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, gender: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 text-slate-900 rounded-2xl px-4 h-14 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none text-sm font-bold appearance-none cursor-pointer hover:bg-slate-50 transition-colors shadow-sm"
+                                                >
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                </select>
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        <Label htmlFor="gender" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Gender</Label>
+
+                                    {/* Smoking History */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="smoking" className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Smoking History</Label>
                                         <div className="relative">
                                             <select
-                                                id="gender"
-                                                value={vitalsForm.gender}
-                                                onChange={(e) => setVitalsForm({ ...vitalsForm, gender: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 text-slate-900 rounded-2xl px-4 h-14 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none text-sm font-bold appearance-none cursor-pointer hover:bg-slate-50 transition-colors shadow-sm"
+                                                id="smoking"
+                                                value={vitalsForm.smoking_history}
+                                                onChange={(e) => setVitalsForm({ ...vitalsForm, smoking_history: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 text-slate-900 rounded-xl px-4 h-11 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none text-sm appearance-none cursor-pointer hover:bg-slate-50 transition-colors shadow-sm font-medium"
                                             >
-                                                <option value="Male">Male</option>
-                                                <option value="Female">Female</option>
+                                                <option value="never">Never Smoked</option>
+                                                <option value="current">Current Smoker</option>
+                                                <option value="former">Former Smoker</option>
+                                                <option value="No Info">No Information</option>
                                             </select>
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                 <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -311,166 +379,145 @@ export default function PatientDashboard() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Smoking History */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="smoking" className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Smoking History</Label>
-                                    <div className="relative">
-                                        <select
-                                            id="smoking"
-                                            value={vitalsForm.smoking_history}
-                                            onChange={(e) => setVitalsForm({ ...vitalsForm, smoking_history: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 text-slate-900 rounded-xl px-4 h-11 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none text-sm appearance-none cursor-pointer hover:bg-slate-50 transition-colors shadow-sm font-medium"
-                                        >
-                                            <option value="never">Never Smoked</option>
-                                            <option value="current">Current Smoker</option>
-                                            <option value="former">Former Smoker</option>
-                                            <option value="No Info">No Information</option>
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Binary Toggles */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-center mb-2">Hypertension</Label>
-                                        <div className="flex bg-slate-200/50 rounded-lg p-1">
-                                            <button
-                                                onClick={() => setVitalsForm({ ...vitalsForm, hypertension: '0' })}
-                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.hypertension === '0' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                NO
-                                            </button>
-                                            <button
-                                                onClick={() => setVitalsForm({ ...vitalsForm, hypertension: '1' })}
-                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.hypertension === '1' ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                YES
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-center mb-2">Heart Disease</Label>
-                                        <div className="flex bg-slate-200/50 rounded-lg p-1">
-                                            <button
-                                                onClick={() => setVitalsForm({ ...vitalsForm, heart_disease: '0' })}
-                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.heart_disease === '0' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                NO
-                                            </button>
-                                            <button
-                                                onClick={() => setVitalsForm({ ...vitalsForm, heart_disease: '1' })}
-                                                className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.heart_disease === '1' ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                YES
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Vitals Inputs */}
-                                <div className="space-y-4 pt-4 border-t border-slate-100">
+                                    {/* Binary Toggles */}
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="glucose" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">Glucose</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="glucose"
-                                                    type="number"
-                                                    value={vitalsForm.glucose}
-                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, glucose: e.target.value })}
-                                                    className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-12 font-bold shadow-sm"
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">mg/dL</span>
+                                        <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-center mb-2">Hypertension</Label>
+                                            <div className="flex bg-slate-200/50 rounded-lg p-1">
+                                                <button
+                                                    onClick={() => setVitalsForm({ ...vitalsForm, hypertension: '0' })}
+                                                    className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.hypertension === '0' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    NO
+                                                </button>
+                                                <button
+                                                    onClick={() => setVitalsForm({ ...vitalsForm, hypertension: '1' })}
+                                                    className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.hypertension === '1' ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    YES
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-center mb-2">Heart Disease</Label>
+                                            <div className="flex bg-slate-200/50 rounded-lg p-1">
+                                                <button
+                                                    onClick={() => setVitalsForm({ ...vitalsForm, heart_disease: '0' })}
+                                                    className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.heart_disease === '0' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    NO
+                                                </button>
+                                                <button
+                                                    onClick={() => setVitalsForm({ ...vitalsForm, heart_disease: '1' })}
+                                                    className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${vitalsForm.heart_disease === '1' ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    YES
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Vitals Inputs */}
+                                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="glucose" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">Glucose</Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        id="glucose"
+                                                        type="number"
+                                                        value={vitalsForm.glucose}
+                                                        onChange={(e) => setVitalsForm({ ...vitalsForm, glucose: e.target.value })}
+                                                        className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-12 font-bold shadow-sm"
+                                                    />
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">mg/dL</span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="hba1c" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">HbA1c</Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        id="hba1c"
+                                                        type="number"
+                                                        step="0.1"
+                                                        value={vitalsForm.hba1c}
+                                                        onChange={(e) => setVitalsForm({ ...vitalsForm, hba1c: e.target.value })}
+                                                        className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-8 font-bold shadow-sm"
+                                                    />
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">%</span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="hba1c" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">HbA1c</Label>
+                                            <Label htmlFor="bmi" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">BMI Index</Label>
                                             <div className="relative">
                                                 <Input
-                                                    id="hba1c"
+                                                    id="bmi"
                                                     type="number"
                                                     step="0.1"
-                                                    value={vitalsForm.hba1c}
-                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, hba1c: e.target.value })}
-                                                    className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-8 font-bold shadow-sm"
+                                                    value={vitalsForm.bmi}
+                                                    onChange={(e) => setVitalsForm({ ...vitalsForm, bmi: e.target.value })}
+                                                    className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-12 font-bold shadow-sm"
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">%</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">kg/m²</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="bmi" className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-1">BMI Index</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="bmi"
-                                                type="number"
-                                                step="0.1"
-                                                value={vitalsForm.bmi}
-                                                onChange={(e) => setVitalsForm({ ...vitalsForm, bmi: e.target.value })}
-                                                className="bg-white border-slate-200 text-slate-900 focus:ring-indigo-500/20 focus:border-indigo-500 h-10 pr-12 font-bold shadow-sm"
-                                            />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">kg/m²</span>
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="p-6 pt-2 bg-slate-50/50">
-                                <Button
-                                    onClick={handleUpdateVitals}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold tracking-widest h-12 text-sm rounded-xl shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                                >
-                                    EXECUTE AI ANALYSIS
-                                </Button>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                                <div className="p-6 pt-2 bg-slate-50/50">
+                                    <Button
+                                        onClick={handleUpdateVitals}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold tracking-widest h-12 text-sm rounded-xl shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                    >
+                                        EXECUTE AI ANALYSIS
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
 
                 {/* 1. Hero: "Am I Okay?" */}
-                {status && (
-                    <div className={`relative overflow-hidden p-8 rounded-[2rem] shadow-sm border transition-all duration-300 group
+                {
+                    status && (
+                        <div className={`relative overflow-hidden p-8 rounded-[2rem] shadow-sm border transition-all duration-300 group
                       ${status.level === 'low' ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100/50' :
-                            status.level === 'high' ? 'bg-gradient-to-br from-rose-50 to-orange-50 border-rose-100/50' :
-                                'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100/50'}`}>
+                                status.level === 'high' ? 'bg-gradient-to-br from-rose-50 to-orange-50 border-rose-100/50' :
+                                    'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100/50'}`}>
 
-                        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                            <div className="space-y-3">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/50 backdrop-blur-sm
+                            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                <div className="space-y-3">
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/50 backdrop-blur-sm
                                ${status.level === 'low' ? 'bg-emerald-100/80 text-emerald-800' :
-                                        status.level === 'high' ? 'bg-rose-100/80 text-rose-800' : 'bg-amber-100/80 text-amber-800'}`}>
-                                    {status.level === 'low' ? <ShieldCheck className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                                    Current Status
-                                </span>
-                                <div>
-                                    <div className="flex items-baseline gap-3">
-                                        <h2 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
-                                            {patient.prediction?.riskScore ? `${patient.prediction.riskScore.toFixed(4)}%` : '--'}
-                                        </h2>
-                                        <span className="text-xl font-bold text-slate-400 uppercase tracking-widest">{status.level} RISK</span>
+                                            status.level === 'high' ? 'bg-rose-100/80 text-rose-800' : 'bg-amber-100/80 text-amber-800'}`}>
+                                        {status.level === 'low' ? <ShieldCheck className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                        Current Status
+                                    </span>
+                                    <div>
+                                        <div className="flex items-baseline gap-3">
+                                            <h2 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
+                                                {patient.prediction?.riskScore ? `${patient.prediction.riskScore.toFixed(4)}%` : '--'}
+                                            </h2>
+                                            <span className="text-xl font-bold text-slate-400 uppercase tracking-widest">{status.level} RISK</span>
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-slate-700 mt-1">{status.status}</h3>
                                     </div>
-                                    <h3 className="text-lg font-semibold text-slate-700 mt-1">{status.status}</h3>
+                                    <p className="text-base font-medium text-slate-600/90 leading-relaxed max-w-lg">
+                                        {status.message}
+                                    </p>
                                 </div>
-                                <p className="text-base font-medium text-slate-600/90 leading-relaxed max-w-lg">
-                                    {status.message}
-                                </p>
-                            </div>
 
-                            <div className={`hidden md:flex h-20 w-20 rounded-full border-4 items-center justify-center bg-white shadow-sm
+                                <div className={`hidden md:flex h-20 w-20 rounded-full border-4 items-center justify-center bg-white shadow-sm
                             ${status.level === 'low' ? 'border-emerald-100 text-emerald-500' :
-                                    status.level === 'high' ? 'border-rose-100 text-rose-500' : 'border-amber-100 text-amber-500'}`}>
-                                {status.level === 'low' ? <CheckCircle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}
+                                        status.level === 'high' ? 'border-rose-100 text-rose-500' : 'border-amber-100 text-amber-500'}`}>
+                                    {status.level === 'low' ? <CheckCircle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* 2. My Vitals Section (Real Data & Share) */}
                 <div className="space-y-4">

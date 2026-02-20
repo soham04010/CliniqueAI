@@ -43,8 +43,11 @@ export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
             const { data } = await api.post('/patients/copilot', payload);
             let replyText = data.reply.replace(/(\d+\.\d{2,})%/g, (_: string, p1: string) => `${parseFloat(p1).toFixed(1)}%`);
             setMessages(prev => [...prev, { role: 'assistant', content: replyText }]);
-        } catch (err) {
-            setMessages(prev => [...prev, { role: 'assistant', content: "⚠️ Connection error. Please try again." }]);
+        } catch (err: any) {
+            console.error("Co-Pilot API Error:", err);
+            // Check for specific error types if possible (e.g. 404, 500)
+            const errorMessage = err.response?.data?.message || err.message || "Connection error";
+            setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${errorMessage}. Please check console.` }]);
         } finally {
             setLoading(false);
         }
@@ -129,15 +132,29 @@ export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
                                     : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none'
                                     }`}>
                                     {m.role === 'assistant' ? (
-                                        <div className="space-y-2">
-                                            {m.content.split('\n').map((line: string, idx: number) => {
+                                        <div className="space-y-1">
+                                            {m.content.split('\n').filter((l: string) => l.trim().length > 0).map((line: string, idx: number) => {
                                                 const trimmed = line.trim();
-                                                const isBullet = trimmed.startsWith('* ') || trimmed.startsWith('- ');
+                                                const isBullet = trimmed.startsWith('* ') || trimmed.startsWith('- ') || trimmed.startsWith('• ');
                                                 const isNumbered = /^\d+\./.test(trimmed);
-                                                let className = "text-slate-700";
-                                                if (isBullet || isNumbered) className += " pl-4";
+                                                let className = "text-slate-700 leading-relaxed";
+
+                                                let displayContent = line;
+
+                                                // Enhance bullet styling
+                                                if (isBullet) {
+                                                    className += " pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-teal-500 before:font-bold";
+                                                    // Remove the marker ("* ", "- ", "• ") from the text
+                                                    // Using a more robust regex that handles optional spaces and different markers
+                                                    displayContent = trimmed.replace(/^[\*\-•]\s*/, '');
+                                                }
+                                                if (isNumbered) className += " pl-4 block";
+
+                                                // Clean up the line content for display if we want custom bullets, 
+                                                // but for now, rely on standard text with better spacing.
+
                                                 // Bold parsing
-                                                const parts = line.split(/(\*\*.*?\*\*)/g);
+                                                const parts = displayContent.split(/(\*\*.*?\*\*)/g);
                                                 return (
                                                     <p key={idx} className={className}>
                                                         {parts.map((part, i) => {

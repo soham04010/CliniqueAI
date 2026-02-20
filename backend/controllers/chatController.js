@@ -7,7 +7,8 @@ const getChatHistory = async (req, res) => {
       $or: [
         { senderId: userId, receiverId: otherId },
         { senderId: otherId, receiverId: userId }
-      ]
+      ],
+      deletedBy: { $ne: userId } // Exclude messages deleted by this user
     }).sort({ timestamp: 1 });
     res.json(messages);
   } catch (error) {
@@ -15,4 +16,37 @@ const getChatHistory = async (req, res) => {
   }
 };
 
-module.exports = { getChatHistory };
+const deleteChatHistory = async (req, res) => {
+  const { userId, otherId } = req.params;
+  try {
+    await Message.updateMany(
+      {
+        $or: [
+          { senderId: userId, receiverId: otherId },
+          { senderId: otherId, receiverId: userId }
+        ]
+      },
+      { $addToSet: { deletedBy: userId } }
+    );
+    res.json({ message: "Chat history deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const markMessagesAsRead = async (req, res) => {
+  const { otherId } = req.params;
+  const userId = req.user._id;
+
+  try {
+    await Message.updateMany(
+      { senderId: otherId, receiverId: userId, isRead: false },
+      { $set: { isRead: true } }
+    );
+    res.json({ message: "Messages marked as read" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getChatHistory, deleteChatHistory, markMessagesAsRead };

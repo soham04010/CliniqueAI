@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
+import { MobileNav } from "@/components/shared/MobileNav";
 import {
   Loader2,
   PlusCircle,
@@ -97,11 +98,14 @@ export default function DoctorDashboard() {
 
     try {
       const user = JSON.parse(userStr);
-      if (user.role !== "doctor") { router.push("/login"); return; }
+      if (user.role !== "doctor") {
+        router.push("/login");
+        return;
+      }
       setDoctorName(user.name);
       fetchPatients();
     } catch (e) {
-      localStorage.clear();
+      console.error("Local storage corruption:", e);
       router.push("/login");
     }
   }, [fetchPatients, router]);
@@ -495,20 +499,20 @@ export default function DoctorDashboard() {
 
           {/* 6. ACTIVE PATIENT DIRECTORY (TABLE REPLACEMENT) */}
           <Card className="border-none shadow-[0_2px_20px_rgb(0,0,0,0.02)] bg-white rounded-[24px] overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 px-8 py-6">
+            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 px-6 md:px-8 py-6 gap-4">
               <div>
-                <CardTitle className="text-lg font-bold text-slate-800">Active Patient Directory</CardTitle>
+                <CardTitle className="text-lg font-bold text-slate-800 leading-tight">Active Patient Directory</CardTitle>
                 <p className="text-xs text-slate-500 font-medium mt-1">Real-time clinical records</p>
               </div>
 
-              <div className="flex gap-3">
-                <Button onClick={fetchPatients} variant="outline" size="sm" className="h-10 px-4 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl font-medium shadow-sm">
+              <div className="flex flex-wrap md:flex-nowrap gap-3 w-full md:w-auto">
+                <Button onClick={fetchPatients} variant="outline" size="sm" className="flex-1 md:flex-none h-10 px-4 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-teal-600 rounded-xl font-medium shadow-sm">
                   <RefreshCcw size={14} className={`mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
                 </Button>
 
                 <Dialog open={isAiOpen} onOpenChange={setIsAiOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 border-none rounded-xl font-bold transition-all hover:scale-105 active:scale-95">
+                    <Button size="sm" className="flex-1 md:flex-none h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 border-none rounded-xl font-bold transition-all hover:scale-105 active:scale-95">
                       <PlusCircle size={16} className="mr-2" /> New Assessment
                     </Button>
                   </DialogTrigger>
@@ -590,8 +594,8 @@ export default function DoctorDashboard() {
             </CardHeader>
 
             <div className="flex flex-col gap-3 px-6 pb-6">
-              {/* Custom Header Row */}
-              <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-slate-50/50 rounded-xl border border-slate-100/50 text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {/* Custom Header Row - Hidden on Mobile */}
+              <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-slate-50/50 rounded-xl border border-slate-100/50 text-xs font-bold text-slate-400 uppercase tracking-wider">
                 <div className="col-span-4 pl-2">Patient</div>
                 <div className="col-span-3 text-center">Risk Status</div>
                 <div className="col-span-3 text-center">Contact Info</div>
@@ -614,34 +618,40 @@ export default function DoctorDashboard() {
                     <div
                       key={p._id}
                       onClick={() => router.push(`/doctor/patients/${p._id}`)}
-                      className="group grid grid-cols-12 gap-4 items-center p-4 bg-white border border-slate-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-teal-100 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden"
+                      className="group flex flex-col md:grid md:grid-cols-12 gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-teal-100 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden"
                     >
                       {/* Hover Gradient */}
                       <div className="absolute inset-0 bg-gradient-to-r from-teal-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
 
                       {/* Patient Info */}
-                      <div className="col-span-4 flex items-center gap-4 relative z-10">
+                      <div className="col-span-12 md:col-span-4 flex items-center gap-4 relative z-10">
                         <div className="relative">
                           <Avatar className="h-12 w-12 border-2 border-slate-50 shadow-sm group-hover:scale-105 transition-transform">
                             <AvatarFallback className={`font-bold ${p.prediction?.riskLevel === 'High' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-600'}`}>
                               {p.name.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
-                          {/* Online/Status Dot */}
                           <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${p.prediction?.riskLevel === 'High' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-800 text-[15px] group-hover:text-teal-700 transition-colors">{p.name}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-slate-800 text-[15px] group-hover:text-teal-700 transition-colors truncate">{p.name}</p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <p className="text-xs text-slate-400 font-medium">{p.inputs?.age} yrs</p>
                             <span className="h-1 w-1 rounded-full bg-slate-300"></span>
                             <p className="text-xs text-slate-400 font-medium capitalize">{p.inputs?.gender}</p>
                           </div>
                         </div>
+                        {/* Mobile-only Risk Badge */}
+                        <div className="md:hidden">
+                          <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-[10px] font-bold border shadow-sm ${p.prediction?.riskLevel === 'High' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
+                            <Activity size={10} strokeWidth={3} />
+                            {p.prediction?.riskLevel}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Risk Status */}
-                      <div className="col-span-3 flex justify-center relative z-10">
+                      {/* Risk Status - Desktop Only */}
+                      <div className="hidden md:flex col-span-3 justify-center relative z-10">
                         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${p.prediction?.riskLevel === 'High'
                           ? 'bg-red-50 text-red-700 border-red-100'
                           : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
@@ -650,26 +660,30 @@ export default function DoctorDashboard() {
                         </div>
                       </div>
 
-                      {/* Contact Info (Replaces HbA1c) */}
-                      <div className="col-span-3 flex flex-col justify-center text-sm relative z-10 space-y-1">
+                      {/* Contact Info */}
+                      <div className="col-span-12 md:col-span-3 flex flex-row md:flex-col items-center md:items-start justify-between md:justify-center text-sm relative z-10 space-y-0 md:space-y-1 pt-3 md:pt-0 border-t md:border-t-0 border-slate-50">
                         <div className="flex items-center gap-2 text-slate-500">
                           <Mail size={12} className="text-slate-400" />
                           <span className="truncate text-xs font-medium">{p.email || <span className="text-slate-400 italic">No email</span>}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-500">
+                        <div className="hidden md:flex items-center gap-2 text-slate-500">
                           <Phone size={12} className="text-slate-400" />
                           <span className="truncate text-xs font-medium">{p.phone || <span className="text-slate-400 italic">No phone</span>}</span>
                         </div>
+                        {/* Mobile Date */}
+                        <div className="md:hidden text-xs font-medium text-slate-400">
+                          {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </div>
                       </div>
 
-                      {/* Date (Replaces BMI) */}
-                      <div className="col-span-1 text-right relative z-10 text-xs font-medium text-slate-500">
+                      {/* Date - Desktop Only */}
+                      <div className="hidden md:block col-span-1 text-right relative z-10 text-xs font-medium text-slate-500">
                         {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </div>
 
                       {/* Actions */}
-                      <div className="col-span-1 flex justify-end relative z-10">
-                        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <div className="col-span-12 md:col-span-1 flex justify-end md:justify-end relative z-10 pt-2 md:pt-0">
+                        <div className="flex items-center gap-1 opacity-100 md:opacity-60 group-hover:opacity-100 transition-opacity">
                           <Button
                             onClick={(e) => initiateDelete(e, p)}
                             variant="ghost"
@@ -697,6 +711,8 @@ export default function DoctorDashboard() {
       {/* 5. FLOATING AI CO-PILOT */}
       <ClinicalCoPilot />
 
+      <MobileNav />
+
       {/* DELETE CONFIRMATION ALERT (Styled) */}
       <AlertDialog open={!!patientToDelete} onOpenChange={(open) => !open && setPatientToDelete(null)}>
         <AlertDialogContent className="bg-white border-none shadow-2xl rounded-2xl">
@@ -716,11 +732,11 @@ export default function DoctorDashboard() {
             />
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-none bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="h-10 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={deleteConfirmation !== patientToDelete?.name}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl"
+              className="h-10 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/20"
             >
               Confirm Delete
             </AlertDialogAction>

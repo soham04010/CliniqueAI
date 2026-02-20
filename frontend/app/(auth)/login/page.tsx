@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Loader2, Activity, Mail, Lock, ArrowRight, CheckCircle2, Star } from "lucide-react";
 import api from "@/lib/api";
 import { GoogleLogin } from "@react-oauth/google";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -98,7 +99,7 @@ export default function LoginPage() {
       await api.post("/auth/forgot-password", { email: resetData.email });
       setForgotStep(2);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to send OTP");
+      toast.error(err.response?.data?.message || "Failed to send OTP");
     } finally {
       setResetLoading(false);
     }
@@ -106,7 +107,7 @@ export default function LoginPage() {
 
   const submitReset = async () => {
     if (resetData.newPassword !== resetData.confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
     setResetLoading(true);
@@ -116,11 +117,11 @@ export default function LoginPage() {
         otp: resetData.otp,
         newPassword: resetData.newPassword
       });
-      alert("Success! You can now login.");
+      toast.success("Success! You can now login.");
       setIsForgotOpen(false);
       setForgotStep(1);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Reset failed");
+      toast.error(err.response?.data?.message || "Reset failed");
     } finally {
       setResetLoading(false);
     }
@@ -179,11 +180,11 @@ export default function LoginPage() {
         >
           {/* Header */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="h-9 w-9 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/20">
-                <Activity className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-3 mb-6 group cursor-pointer">
+              <div className="h-9 w-9 bg-slate-900 rounded-lg flex items-center justify-center border border-white/10 shadow-lg group-hover:scale-110 transition-transform">
+                <Activity className="h-5 w-5 text-[#2bd4bd]" />
               </div>
-              <span className="text-xl font-bold text-slate-900 tracking-tight">CliniqueAI</span>
+              <span className="text-xl font-black text-slate-900 tracking-tight group-hover:text-[#2bd4bd] transition-colors">CliniqueAI</span>
             </div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Welcome back</h1>
             <p className="text-slate-500">Please enter your details to sign in.</p>
@@ -304,11 +305,20 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-      <Dialog open={isForgotOpen} onOpenChange={setIsForgotOpen}>
+      <Dialog open={isForgotOpen} onOpenChange={(open) => {
+        setIsForgotOpen(open);
+        if (!open) setForgotStep(1); // Reset to Step 1 when closed
+      }}>
         <DialogContent className="bg-white border-none shadow-2xl rounded-2xl sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">Reset Password</DialogTitle>
-            <DialogDescription>Enter your email to receive a recovery code.</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              {forgotStep === 1 ? "Reset Password" : "Verify & Set New Password"}
+            </DialogTitle>
+            <DialogDescription>
+              {forgotStep === 1
+                ? "Enter your email to receive a recovery code."
+                : "Enter the code sent to your email and your new password."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             {forgotStep === 1 ? (
