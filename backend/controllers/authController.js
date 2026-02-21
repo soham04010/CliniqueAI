@@ -499,6 +499,8 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Google Login/Signup
 // @route   POST /api/auth/google
+// @desc    Google Login/Signup
+// @route   POST /api/auth/google
 const googleLogin = async (req, res) => {
   const { token } = req.body;
 
@@ -520,6 +522,10 @@ const googleLogin = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        // FIX: Added the same image logic from your loginUser function
+        profilePicture: user.profilePicture || user.avatar || picture, 
+        mobileNumber: user.mobileNumber,
+        isMobileVerified: user.isMobileVerified,
         primaryDoctorId: user.primaryDoctorId,
         token: generateToken(user._id),
       });
@@ -545,6 +551,8 @@ const googleLogin = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        // FIX: Return the picture for newly created Google users too
+        profilePicture: user.profilePicture || user.avatar, 
         token: generateToken(user._id),
       });
     }
