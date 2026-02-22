@@ -277,7 +277,8 @@ const getPatientHistory = async (req, res) => {
 
     const history = await PatientData.find(query)
       .sort({ createdAt: -1 })
-      .select('prediction.riskScore createdAt inputs');
+      .populate('doctor_id', 'name')
+      .select('prediction.riskScore prediction.riskLevel prediction.confidenceLabel createdAt inputs doctor_id');
 
     res.json(history);
   } catch (error) {

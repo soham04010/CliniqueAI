@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Calendar, Activity, Droplets, Scale } from 'lucide-react';
+import { ArrowLeft, Loader2, Calendar, Activity, Droplets, Scale, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import api from '@/lib/api';
+import { generatePatientReport } from '@/lib/generatePDF';
 
 export default function PatientHistoryPage() {
     const router = useRouter();
@@ -99,6 +100,7 @@ export default function PatientHistoryPage() {
                                             <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">HbA1c</th>
                                             <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Glucose</th>
                                             <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">BMI</th>
+                                            <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Report</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -144,6 +146,17 @@ export default function PatientHistoryPage() {
                                                             <Scale className="h-3.5 w-3.5 text-orange-400" />
                                                             {record.inputs?.bmi ?? '--'}
                                                         </div>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl gap-2 font-bold"
+                                                            onClick={async () => await generatePatientReport(record, patientName)}
+                                                        >
+                                                            <Download className="h-4 w-4" />
+                                                            PDF
+                                                        </Button>
                                                     </td>
                                                 </tr>
                                             );
