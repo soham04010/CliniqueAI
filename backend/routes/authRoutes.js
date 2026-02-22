@@ -94,7 +94,16 @@ router.get('/contacts', protect, async (req, res) => {
     });
 
     // 3. Merge Unique IDs and Validate
-    const allContactIds = [...new Set([...clinicalIds.map(id => id.toString()), ...chatIds])]
+    let finalContactIds;
+    if (role === 'doctor') {
+      // Doctors ONLY see patients from their clinical registry
+      finalContactIds = [...new Set(clinicalIds.map(id => id.toString()))];
+    } else {
+      // Patients see assigned doctors + anyone they've communicated with
+      finalContactIds = [...new Set([...clinicalIds.map(id => id.toString()), ...chatIds])];
+    }
+
+    const allContactIds = finalContactIds
       .filter(id => mongoose.Types.ObjectId.isValid(id))
       .map(id => new mongoose.Types.ObjectId(id));
 
@@ -109,9 +118,14 @@ router.get('/contacts', protect, async (req, res) => {
             {
               $match: {
                 $expr: {
-                  $or: [
-                    { $and: [{ $eq: ['$senderId', '$$contactId'] }, { $eq: ['$receiverId', userId] }] },
-                    { $and: [{ $eq: ['$senderId', userId] }, { $eq: ['$receiverId', '$$contactId'] }] }
+                  $and: [
+                    {
+                      $or: [
+                        { $and: [{ $eq: ['$senderId', '$$contactId'] }, { $eq: ['$receiverId', userId] }] },
+                        { $and: [{ $eq: ['$senderId', userId] }, { $eq: ['$receiverId', '$$contactId'] }] }
+                      ]
+                    },
+                    { $not: { $in: [userId, { $ifNull: ['$deletedBy', []] }] } }
                   ]
                 }
               }
@@ -133,7 +147,8 @@ router.get('/contacts', protect, async (req, res) => {
                   $and: [
                     { $eq: ['$senderId', '$$contactId'] },
                     { $eq: ['$receiverId', userId] },
-                    { $eq: ['$isRead', false] }
+                    { $eq: ['$isRead', false] },
+                    { $not: { $in: [userId, { $ifNull: ['$deletedBy', []] }] } }
                   ]
                 }
               }

@@ -7,8 +7,9 @@ import QRCode from "qrcode";
  * @param record The medical record object.
  * @param patientName The name of the patient (optional, will fallback to record.name).
  * @param isDoctorView Whether to include advanced clinical triage metrics.
+ * @param consultingDoctor The name of the doctor generating the report (optional).
  */
-export const generateClinicalReport = async (record: any, patientNameInput?: string, isDoctorView: boolean = false) => {
+export const generateClinicalReport = async (record: any, patientNameInput?: string, isDoctorView: boolean = false, consultingDoctor?: string) => {
   const doc = new jsPDF();
   const patientName = patientNameInput || record.name || "Unknown Patient";
   const dateStr = new Date(record.createdAt || new Date()).toLocaleDateString('en-US', {
@@ -72,36 +73,61 @@ export const generateClinicalReport = async (record: any, patientNameInput?: str
   doc.setDrawColor(240, 240, 240);
   doc.line(15, 45, 195, 45);
 
-  // --- INFO PANES (TWO COLUMN) ---
-  doc.setFillColor(248, 250, 252);
-  doc.rect(15, 50, 85, 35, 'F');
-  doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text("PATIENT IDENTIFICATION", 20, 58);
+  // --- INFO PANES (TWO COLUMN - HOSPITAL GRADE) ---
+  const paneY = 50;
+  const paneHeight = 38;
+  const paneWidth = 85;
+
+  // Left Side: Patient Identification
+  doc.setFillColor(248, 250, 252); // Slate 50
+  doc.roundedRect(15, paneY, paneWidth, paneHeight, 2, 2, 'F');
+  doc.setFillColor(15, 23, 42); // Navy Accent bar
+  doc.rect(15, paneY, 1.5, paneHeight, 'F');
+
+  doc.setFontSize(8);
+  doc.setTextColor(140, 150, 160);
+  doc.setFont("helvetica", "bold");
+  doc.text("PATIENT IDENTIFICATION", 21, paneY + 8);
+
   doc.setFontSize(11);
   doc.setTextColor(30, 41, 59);
   doc.setFont("helvetica", "bold");
-  doc.text(patientName, 20, 66);
-  doc.setFont("helvetica", "normal");
+  doc.text(patientName, 21, paneY + 16);
+
   doc.setFontSize(9);
-  doc.text(`Age: ${record.inputs?.age || '--'} Yrs`, 20, 73);
-  doc.text(`Sex: ${record.inputs?.gender === 1 ? 'Male' : 'Female'}`, 20, 78);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Age: ${record.inputs?.age || '--'} Yrs`, 21, paneY + 24);
+  doc.text(`Sex: ${record.inputs?.gender === 1 ? 'Male' : 'Female'}`, 21, paneY + 30);
 
   // Right Side: Diagnostic Facility Info
   doc.setFillColor(248, 250, 252);
-  doc.rect(110, 50, 85, 35, 'F');
-  doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text("DIAGNOSTIC FACILITY", 115, 58);
+  doc.roundedRect(110, paneY, paneWidth, paneHeight, 2, 2, 'F');
+  doc.setFillColor(45, 212, 191); // Teal Accent bar
+  doc.rect(110, paneY, 1.5, paneHeight, 'F');
+
+  doc.setFontSize(8);
+  doc.setTextColor(140, 150, 160);
+  doc.setFont("helvetica", "bold");
+  doc.text("DIAGNOSTIC FACILITY", 116, paneY + 8);
+
   doc.setFontSize(10);
   doc.setTextColor(30, 41, 59);
   doc.setFont("helvetica", "bold");
-  doc.text("CliniqueAI Virtual Command Hub", 115, 66);
+  doc.text("CliniqueAI Virtual Command Hub", 116, paneY + 16);
+
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  const doctorName = record.doctor_id?.name || record.doctorName || "Independent AI Assessment";
-  doc.text(`Consulting: ${doctorName}`, 115, 73);
+  doc.setTextColor(71, 85, 105);
+  const finalDoctorName = consultingDoctor || record.doctor_id?.name || record.doctorName || "Independent AI Assessment";
+  doc.text("Consulting Physician:", 116, paneY + 24);
   doc.setFont("helvetica", "bold");
-  doc.text(`Timestamp: ${dateStr}`, 115, 79);
+  doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+  doc.text(finalDoctorName, 149, paneY + 24);
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Timestamp: ${dateStr}`, 116, paneY + 30);
 
   // --- EXECUTIVE SUMMARY / RISK VIZ ---
   doc.setFontSize(14);
