@@ -326,7 +326,7 @@ export default function PatientDetailsPage() {
                 </div>
               </Button>
               <Button
-                onClick={async () => await generateClinicalReport(patient, patient.name, true)}
+                onClick={async () => await generateClinicalReport(patient, patient.name, true, doctorName)}
                 variant="outline"
                 className="border-slate-200 text-slate-700 hover:bg-white hover:text-slate-900 shadow-sm transition-all hover:border-slate-300"
               >
