@@ -45,7 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 
 import ClinicalCoPilot from "@/components/ClinicalCoPilot";
-import { generatePatientReport } from "@/lib/generatePDF";
+import { generatePatientReport, generateClinicalReport } from "@/lib/generatePDF";
 
 export default function PatientDetailsPage() {
   const params = useParams();
@@ -325,8 +325,12 @@ export default function PatientDetailsPage() {
                   Message
                 </div>
               </Button>
-              <Button onClick={() => generatePatientReport(patient)} variant="outline" className="border-slate-200 text-slate-700 hover:bg-white hover:text-slate-900 shadow-sm">
-                <FileDown className="mr-2 h-4 w-4" /> Report
+              <Button
+                onClick={async () => await generateClinicalReport(patient, patient.name, true)}
+                variant="outline"
+                className="border-slate-200 text-slate-700 hover:bg-white hover:text-slate-900 shadow-sm transition-all hover:border-slate-300"
+              >
+                <FileDown className="mr-2 h-4 w-4" /> Clinical Report
               </Button>
             </div>
           </div>
