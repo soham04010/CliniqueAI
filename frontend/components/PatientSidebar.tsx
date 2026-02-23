@@ -8,10 +8,12 @@ import {
     MessageSquare,
     Settings,
     LogOut,
-    ChevronUp
+    ChevronUp,
+    HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import HelpSupportModal from "@/components/shared/HelpSupportModal";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,6 +27,7 @@ export default function PatientSidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
 
     useEffect(() => {
         // Only run on client after mount
@@ -120,6 +123,11 @@ export default function PatientSidebar() {
                                 <Settings className="mr-2 h-4 w-4" />
                                 <span>Settings</span>
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsHelpOpen(true)} className="cursor-pointer">
+                                <HelpCircle className="mr-2 h-4 w-4" />
+                                <span>Help & Support</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 <span>Log out</span>
@@ -128,6 +136,11 @@ export default function PatientSidebar() {
                     </DropdownMenu>
                 )}
             </div>
+
+            <HelpSupportModal
+                isOpen={isHelpOpen}
+                onOpenChange={setIsHelpOpen}
+            />
         </aside>
     );
 }

@@ -25,6 +25,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import HelpSupportModal from "@/components/shared/HelpSupportModal";
 
 interface HeaderProps {
     doctorName?: string;
@@ -49,6 +50,7 @@ export default function Header({
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
+    const [isHelpSupportOpen, setIsHelpSupportOpen] = useState(false);
 
     // Local state to handle instant updates from Settings page
     const [localImage, setLocalImage] = useState(doctorImage);
@@ -241,7 +243,7 @@ export default function Header({
                             <DropdownMenuItem onClick={() => router.push("/doctor/settings")} className="p-3 rounded-lg hover:bg-slate-50 cursor-pointer text-slate-600 font-medium text-sm gap-2">
                                 <Settings size={16} /> Settings
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="p-3 rounded-lg hover:bg-slate-50 cursor-pointer text-slate-600 font-medium text-sm gap-2">
+                            <DropdownMenuItem onClick={() => setIsHelpSupportOpen(true)} className="p-3 rounded-lg hover:bg-slate-50 cursor-pointer text-slate-600 font-medium text-sm gap-2">
                                 <HelpCircle size={16} /> Help & Support
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-100" />
@@ -250,6 +252,11 @@ export default function Header({
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+
+                    <HelpSupportModal
+                        isOpen={isHelpSupportOpen}
+                        onOpenChange={setIsHelpSupportOpen}
+                    />
                 </div>
             </div>
         </header>
