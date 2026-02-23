@@ -8,8 +8,9 @@ import logging
 import requests 
 from dotenv import load_dotenv
 from flask_cors import CORS
-from pydantic import BaseModel, ValidationError, Field
+from pydantic import BaseModel, ValidationError, Field, field_validator
 from waitress import serve
+from typing import Union
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,9 +39,10 @@ except Exception as e:
     logger.error(f"❌ Scaler Load Failed: {e}")
     scaler = None
 
-# --- Pydantic Models for Validation ---
+# --- Smarter Pydantic Model ---
 class PredictInput(BaseModel):
-    gender: int = Field(..., ge=0, le=1, description="1=Male, 0=Female")
+    # Accept either Int or String from Node.js
+    gender: Union[int, str] 
     age: float = Field(..., ge=0, le=120)
     hypertension: int = Field(..., ge=0, le=1)
     heart_disease: int = Field(..., ge=0, le=1)
@@ -48,23 +50,32 @@ class PredictInput(BaseModel):
     HbA1c_level: float = Field(..., ge=3, le=20)
     blood_glucose_level: int = Field(..., ge=50, le=500)
     
-    # One-Hot Encoded Smoking History
-    smoking_history_current: int = Field(..., ge=0, le=1)
-    smoking_history_ever: int = Field(..., ge=0, le=1)
-    smoking_history_former: int = Field(..., ge=0, le=1)
-    smoking_history_never: int = Field(..., ge=0, le=1)
-    smoking_history_not_current: int = Field(..., alias="smoking_history_not current", ge=0, le=1)
+    # Accept the raw string from Node.js (e.g., "never", "former")
+    smoking_history: str = "never"
 
-# ... (omitted CopilotInput and health_check)
+    # Convert String Gender to Integer
+    @field_validator('gender')
+    @classmethod
+    def parse_gender(cls, v):
+        if isinstance(v, str):
+            return 1 if v.lower() == 'male' else 0
+        return v
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # 1. Validate Input using Pydantic
+        # 1. Validate & Parse Input using Pydantic
         body = request.get_json()
         input_data = PredictInput(**body)
         
-        # 2. Extract Validated Data in Exact Order for Scaler
+        # 2. Translate "smoking_history" string into the 5 One-Hot fields the Model Needs
+        smoke_curr = 1 if input_data.smoking_history == "current" else 0
+        smoke_ever = 1 if input_data.smoking_history == "ever" else 0
+        smoke_former = 1 if input_data.smoking_history == "former" else 0
+        smoke_never = 1 if input_data.smoking_history == "never" else 0
+        smoke_not_curr = 1 if input_data.smoking_history == "not current" else 0
+        
+        # 3. Extract Validated Data in Exact Order for Scaler
         feature_data = {
             "gender": [input_data.gender],
             "age": [input_data.age],
@@ -73,11 +84,11 @@ def predict():
             "bmi": [input_data.bmi],
             "HbA1c_level": [input_data.HbA1c_level],
             "blood_glucose_level": [input_data.blood_glucose_level],
-            "smoking_history_current": [input_data.smoking_history_current],
-            "smoking_history_ever": [input_data.smoking_history_ever],
-            "smoking_history_former": [input_data.smoking_history_former],
-            "smoking_history_never": [input_data.smoking_history_never],
-            "smoking_history_not current": [input_data.smoking_history_not_current]
+            "smoking_history_current": [smoke_curr],
+            "smoking_history_ever": [smoke_ever],
+            "smoking_history_former": [smoke_former],
+            "smoking_history_never": [smoke_never],
+            "smoking_history_not current": [smoke_not_curr]
         }
 
         # Create DataFrame with valid feature names
@@ -97,15 +108,6 @@ def predict():
             score = 15.0 + (input_data.bmi/2) if input_data.blood_glucose_level < 140 else 85.0
             prediction = [1] if score > 50 else [0]
             probability = score / 100
-
-        return jsonify({
-            'prediction': int(prediction[0]),
-            'probability': float(probability),
-            'risk_score': float(score),
-            'risk_level': "High" if probability > 0.7 else "Moderate" if probability > 0.3 else "Low",
-            'confidence_score': round(abs(float(probability) - 0.5) * 2, 2),
-            'confidence_label': "High" if abs(float(probability) - 0.5) * 2 >= 0.7 else "Moderate" if abs(float(probability) - 0.5) * 2 >= 0.4 else "Low"
-        })
 
         return jsonify({
             'prediction': int(prediction[0]),
