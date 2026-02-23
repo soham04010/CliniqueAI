@@ -1,8 +1,22 @@
-# 🏥 CliniqueAI: Next-Gen Clinical Intelligence Platform
+<p align="center">
+  <img src="frontend/public/logo.svg" width="120" alt="CliniqueAI Logo" />
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](https://opensource.org/licenses/MIT)
-[![Build: Success](https://img.shields.io/badge/Build-Passing-emerald.svg)]()
-[![Platform: Web](https://img.shields.io/badge/Platform-Web-blue.svg)]()
+<h1 align="center">CliniqueAI</h1>
+
+<p align="center">
+  <strong>Next-Gen Clinical Intelligence — Bridging the gap between patient data and predictive care.</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js%2014-blue?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/Node.js%20Express-teal?style=for-the-badge&logo=express&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/MongoDB-emerald?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/TypeScript%205-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Python%20Flask-white?style=for-the-badge&logo=flask&logoColor=black" alt="Flask" />
+</p>
+
+---
 
 CliniqueAI is a state-of-the-art SaaS platform designed to bridge the gap between clinical data and predictive diagnostics. By utilizing advanced machine learning and real-time messaging, CliniqueAI empowers doctors with predictive risk assessments and patients with a streamlined care experience.
 
