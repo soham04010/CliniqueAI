@@ -21,6 +21,15 @@ load_dotenv() # Load environment variables from .env file
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes (Production Requirement)
 
+# --- Uptime Robot Health Check Route ---
+@app.route('/', methods=['GET', 'HEAD'])
+def health_check():
+    """Simple route to keep Render instance awake via Uptime Robot."""
+    return jsonify({
+        "status": "online", 
+        "message": "CliniqueAI Python Engine is awake."
+    }), 200
+
 # Load Model
 try:
     with open('diabetes_model.pkl', 'rb') as f:
