@@ -21,6 +21,7 @@ import api from "@/lib/api";
 import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
 import { MobileNav } from "@/components/shared/MobileNav";
+import BrandedLoading from "@/components/shared/BrandedLoading";
 
 
 
@@ -241,7 +242,7 @@ export default function DoctorSettingsPage() {
             setOtpLoading(false);
         }
     };
-    if (loading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-teal-600" /></div>;
+    if (loading) return <BrandedLoading message="Securing Account Access..." />;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 flex text-sm selection:bg-teal-100 selection:text-teal-900">

@@ -32,6 +32,7 @@ import api from "@/lib/api";
 import { getHumanStatus, getDeltas } from "@/lib/patientLogic";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
+import BrandedLoading from "@/components/shared/BrandedLoading";
 
 export default function PatientDashboard() {
     const router = useRouter();
@@ -233,9 +234,7 @@ export default function PatientDashboard() {
     };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-            <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
-        </div>
+        <BrandedLoading message="Preparing Your Health Insights..." />
     );
 
     return (

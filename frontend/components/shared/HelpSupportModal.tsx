@@ -238,7 +238,7 @@ export default function HelpSupportModal({ isOpen, onOpenChange }: HelpSupportMo
                                         </div>
                                         <div>
                                             <span className="block font-bold text-slate-900 text-xs">Call 24/7</span>
-                                            <span className="text-[10px] text-teal-600 font-extrabold">+1 (800) CLIN</span>
+                                            <span className="text-[10px] text-teal-600 font-extrabold">+91 7622946712</span>
                                         </div>
                                     </button>
                                 </div>

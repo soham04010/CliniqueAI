@@ -392,14 +392,22 @@ const updatePatientDetails = async (req, res) => {
       patientData.inputs = {};
     }
 
-    // Apply the updates
-    if (gender) patientData.inputs.gender = gender;
+    // Apply the updates with correct type mapping
+    if (gender) {
+      patientData.inputs.gender = (gender === 'Male' || gender === 'male' || gender === 1) ? 1 : 0;
+    }
+
     if (age) patientData.inputs.age = Number(age);
     if (hypertension !== undefined) patientData.inputs.hypertension = Number(hypertension);
     if (heart_disease !== undefined) patientData.inputs.heart_disease = Number(heart_disease);
 
     if (smoking_history) {
-      patientData.inputs.smoking_history = smoking_history;
+      // Correctly map one-hot encoded smoking history fields
+      patientData.inputs.smoking_history_current = smoking_history === 'current' ? 1 : 0;
+      patientData.inputs.smoking_history_ever = smoking_history === 'ever' ? 1 : 0; // Added for completeness if ever used
+      patientData.inputs.smoking_history_former = smoking_history === 'former' ? 1 : 0;
+      patientData.inputs.smoking_history_never = smoking_history === 'never' ? 1 : 0;
+      patientData.inputs["smoking_history_not current"] = smoking_history === 'not current' ? 1 : 0;
     }
 
     if (email) patientData.email = email;

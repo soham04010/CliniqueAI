@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import api from '@/lib/api';
 import { generatePatientReport } from '@/lib/generatePDF';
+import BrandedLoading from "@/components/shared/BrandedLoading";
 
 export default function PatientHistoryPage() {
     const router = useRouter();
@@ -48,9 +49,7 @@ export default function PatientHistoryPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-                <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
-            </div>
+            <BrandedLoading message="Retrieving Health History..." />
         );
     }
 

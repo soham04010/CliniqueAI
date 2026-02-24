@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import BrandedLoading from "@/components/shared/BrandedLoading";
 
 
 export default function PatientSettingsPage() {
@@ -215,7 +216,7 @@ export default function PatientSettingsPage() {
         router.push("/login");
     };
 
-    if (loading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-indigo-600" /></div>;
+    if (loading) return <BrandedLoading message="Securing Your Profile..." />;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-12">
