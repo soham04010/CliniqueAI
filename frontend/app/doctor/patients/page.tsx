@@ -22,6 +22,14 @@ import BrandedLoading from "@/components/shared/BrandedLoading";
 import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
 import { MobileNav } from "@/components/shared/MobileNav";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,74 +145,79 @@ export default function PatientsPage() {
                 <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
 
                     {/* STATS ROW (ULTRA MODERN) */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
                         {/* Total Patients */}
-                        <div className="group relative bg-white rounded-[24px] p-6 shadow-[0_2px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 overflow-hidden border border-slate-100">
-                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity duration-500 transform group-hover:scale-110">
-                                <User size={140} className="text-blue-900" />
-                            </div>
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
-                                        <User size={18} strokeWidth={2.5} />
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Patients</span>
+                        <Card className="bg-white rounded-[10px] p-5 border border-slate-200 flex flex-col justify-between min-h-[130px]">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-slate-500">
+                                    <User size={14} strokeWidth={2} />
+                                    <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Global Register</h4>
                                 </div>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="text-5xl font-black text-slate-800 tracking-tight">{activeCount}</h3>
-                                    <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
-                                        <TrendingUp size={12} /> +12%
-                                    </span>
-                                </div>
-                                <p className="text-slate-400 text-xs font-medium mt-3 pl-1">Active within last 30 days</p>
+                                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-tight">Clinical Cohort</h2>
                             </div>
-                        </div>
 
-                        {/* Low Risk */}
-                        <div className="group relative bg-white rounded-[24px] p-6 shadow-[0_2px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 overflow-hidden border border-slate-100">
-                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity duration-500 transform group-hover:scale-110">
-                                <ShieldCheck size={140} className="text-emerald-900" />
-                            </div>
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
-                                        <ShieldCheck size={18} strokeWidth={2.5} />
+                            <div className="mt-4 flex flex-col flex-1 justify-end">
+                                <div className="flex items-baseline justify-between">
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{activeCount}</h3>
+                                    <div className="text-[10px] font-bold text-emerald-600">
+                                        ▲ 12%
                                     </div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Stable</span>
                                 </div>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="text-5xl font-black text-slate-800 tracking-tight">{activeCount - highRiskCount}</h3>
-                                    <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
-                                        <TrendingUp size={12} /> +5%
-                                    </span>
-                                </div>
-                                <p className="text-slate-400 text-xs font-medium mt-3 pl-1">Low clinical risk detected</p>
+                                <p className="text-slate-400 text-[9px] font-bold uppercase tracking-tight mt-1">
+                                    vs last 30 days
+                                </p>
                             </div>
-                        </div>
+                        </Card>
 
-                        {/* High Risk */}
-                        <div className="group relative bg-white rounded-[24px] p-6 shadow-[0_2px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgba(239,68,68,0.15)] transition-all duration-500 overflow-hidden border border-slate-100 hover:border-red-100">
-                            <div className="absolute inset-0 bg-gradient-to-r from-red-50/0 to-red-50/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity duration-500 transform group-hover:scale-110">
-                                <AlertTriangle size={140} className="text-red-900" />
+                        {/* Stable Cases */}
+                        <Card className="bg-white rounded-[10px] p-5 border border-slate-200 flex flex-col justify-between min-h-[130px]">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-slate-500">
+                                    <ShieldCheck size={14} strokeWidth={2} />
+                                    <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Clinical Baseline</h4>
+                                </div>
+                                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-tight">Verified Stable</h2>
                             </div>
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-lg shadow-red-500/30 group-hover:scale-110 transition-transform duration-300 animate-pulse">
-                                        <AlertTriangle size={18} strokeWidth={2.5} />
+
+                            <div className="mt-4 flex flex-col flex-1 justify-end">
+                                <div className="flex items-baseline justify-between">
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{activeCount - highRiskCount}</h3>
+                                    <div className="text-[10px] font-bold text-slate-500">
+                                        ▼ 2.4%
                                     </div>
-                                    <span className="text-xs font-bold text-red-400 uppercase tracking-widest group-hover:text-red-500 transition-colors">Attention Needed</span>
                                 </div>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="text-5xl font-black text-slate-800 tracking-tight">{highRiskCount}</h3>
-                                    <span className="text-sm font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100 flex items-center gap-1">
-                                        <TrendingUp size={12} /> +2
-                                    </span>
-                                </div>
-                                <p className="text-slate-400 text-xs font-medium mt-3 pl-1 group-hover:text-red-400 transition-colors">Require immediate review</p>
+                                <p className="text-slate-400 text-[9px] font-bold uppercase tracking-tight mt-1">
+                                    Stable Capacity
+                                </p>
                             </div>
-                        </div>
+                        </Card>
+
+                        {/* Attention Needed */}
+                        <Card className="bg-white rounded-[10px] p-5 border border-slate-200 border-l-4 border-l-red-600 relative overflow-hidden flex flex-col justify-between min-h-[130px]">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded bg-red-50 flex items-center justify-center text-red-600 border border-red-100">
+                                        <AlertTriangle size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <h4 className="text-[10px] font-bold text-red-900 uppercase tracking-widest">Urgent</h4>
+                                        <h2 className="text-[11px] font-black text-red-600 uppercase tracking-tight">Critical Cases</h2>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex flex-col flex-1 justify-end">
+                                <div className="flex items-baseline justify-between">
+                                    <h3 className="text-3xl font-black text-red-950 tracking-tight">{highRiskCount}</h3>
+                                    <div className="text-[10px] font-bold text-red-600 animate-pulse">
+                                        +2 Pending
+                                    </div>
+                                </div>
+                                <p className="text-red-900/40 text-[9px] font-bold uppercase tracking-tight mt-1">
+                                    Immediate Review Required
+                                </p>
+                            </div>
+                        </Card>
                     </div>
 
                     {/* TABLE SECTION (FLOATING ROWS) */}
@@ -233,89 +246,127 @@ export default function PatientsPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        {filteredPatients.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[32px] border border-dashed border-slate-200">
-                                <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 text-slate-300">
-                                    <User size={32} />
-                                </div>
-                                <p className="text-slate-500 font-medium">No patients found</p>
-                            </div>
-                        ) : (
-                            filteredPatients.map((patient) => (
-                                <div
-                                    key={patient._id}
-                                    onClick={() => router.push(`/doctor/patients/${patient._id}`)}
-                                    className="group flex flex-col md:flex-row md:items-center p-4 bg-white rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:border-blue-100 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden"
-                                >
-                                    {/* Hover Strip */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                                    <div className="flex items-center justify-between w-full md:w-auto md:flex-1">
-                                        {/* NAME */}
-                                        <div className="flex items-center gap-4 pl-2">
-                                            <Avatar className="h-10 w-10 md:h-12 md:w-12 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform bg-white">
-                                                <AvatarFallback className="font-bold text-slate-600 bg-slate-50">{patient.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-bold text-slate-800 text-sm md:text-[15px] group-hover:text-blue-700 transition-colors">{patient.name}</p>
-                                                <p className="text-[10px] text-slate-400 font-medium font-mono">ID: {patient._id.slice(-6).toUpperCase()}</p>
+                    <Card className="bg-white rounded-[10px] border border-slate-200 overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent border-slate-100">
+                                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10 px-6">
+                                        <div className="flex items-center gap-1.5">
+                                            Patient Profile
+                                            <div className="flex flex-col gap-0.5 opacity-30">
+                                                <div className="w-1.5 h-0.5 bg-slate-950" />
+                                                <div className="w-1 h-0.5 bg-slate-950" />
                                             </div>
                                         </div>
-
-                                        {/* Mobile Risk Indicator */}
-                                        <div className="md:hidden">
-                                            <div className={`p-1.5 rounded-full border ${patient.prediction?.riskLevel === 'High' ? 'bg-red-50 border-red-100 text-red-500' : 'bg-emerald-50 border-emerald-100 text-emerald-500'}`}>
-                                                <Activity size={14} />
+                                    </TableHead>
+                                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10">
+                                        <div className="flex items-center gap-1.5">
+                                            Clinical ID
+                                            <div className="w-1.5 h-1.5 border-r border-t border-slate-400 rotate-45 mt-1 opacity-20" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10 text-center">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            Risk Status
+                                            <div className="w-1.5 h-1.5 border-r border-t border-slate-400 rotate-45 mt-1 opacity-20" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10">Communication</TableHead>
+                                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10 text-right px-6">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            Enrolled Date
+                                            <div className="flex flex-col gap-0.5 opacity-30">
+                                                <div className="w-1 h-0.5 bg-slate-950" />
+                                                <div className="w-1.5 h-0.5 bg-slate-950" />
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap md:flex-nowrap items-center w-full md:w-auto mt-4 md:mt-0 gap-4 md:gap-0">
-                                        {/* STATUS */}
-                                        <div className="flex-1 md:w-40 flex justify-start md:justify-center">
-                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold border ${patient.prediction?.riskLevel === 'High'
-                                                ? 'bg-red-50 text-red-700 border-red-100'
-                                                : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                                }`}>
-                                                <span className={`h-1.5 w-1.5 md:h-2 md:w-2 rounded-full ${patient.prediction?.riskLevel === 'High' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
-                                                {patient.prediction?.riskLevel || "Low"} Risk
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredPatients.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-64 text-center bg-slate-50/10">
+                                            <div className="flex flex-col items-center justify-center space-y-3">
+                                                <User className="text-slate-300" size={32} strokeWidth={1} />
+                                                <div>
+                                                    <p className="text-slate-800 font-black text-sm uppercase">No active records</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Found in current clinical view</p>
+                                                </div>
                                             </div>
-                                        </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredPatients.map((patient) => {
+                                        const enrollmentDate = new Date(patient.createdAt || Date.now());
+                                        const formattedDate = `${enrollmentDate.getDate()} ${enrollmentDate.toLocaleString('default', { month: 'short' })} ${enrollmentDate.getFullYear()}`;
 
-                                        {/* CONTACT */}
-                                        <div className="w-full md:w-64 flex flex-col md:flex-col gap-1 text-left md:pl-8 py-2 md:py-0 border-t md:border-t-0 border-slate-50">
-                                            <div className="flex items-center gap-2 text-slate-500 text-xs">
-                                                <Mail size={12} className="text-slate-400" />
-                                                <span className="truncate">{patient.email || "No email"}</span>
-                                            </div>
-                                            <div className="hidden md:flex items-center gap-2 text-slate-500 text-xs">
-                                                <Phone size={12} className="text-slate-400" />
-                                                <span className="truncate">{patient.phone || "No phone"}</span>
-                                            </div>
-                                        </div>
+                                        return (
+                                            <TableRow
+                                                key={patient._id}
+                                                onClick={() => router.push(`/doctor/patients/${patient._id}`)}
+                                                className="group cursor-pointer hover:bg-slate-50 border-slate-50 transition-colors relative"
+                                            >
+                                                <TableCell className="py-2.5 px-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        <Avatar className="h-10 w-10 border border-slate-100 bg-white">
+                                                            <AvatarFallback className={`text-[10px] font-bold uppercase ${patient.prediction?.riskLevel === 'High' ? 'bg-red-50 text-red-700' : 'bg-slate-50 text-slate-700'}`}>
+                                                                {patient.name.charAt(0)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <p className="text-[13px] font-bold text-slate-900 group-hover:text-black leading-tight uppercase tracking-tight">{patient.name}</p>
+                                                            <p className="text-[9px] text-slate-450 font-bold mt-0.5 uppercase tracking-widest leading-none">{patient.inputs?.age || '--'} Yrs • {patient.inputs?.gender === 1 ? 'M' : 'F'}</p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
 
-                                        {/* LAST VISIT */}
-                                        <div className="flex-none w-auto md:w-32 text-right md:text-center text-slate-500 text-[10px] md:text-xs font-bold ml-auto md:ml-0">
-                                            <div className="flex items-center justify-center gap-1.5 p-1.5 md:p-2 rounded-lg group-hover:bg-slate-50 transition-colors">
-                                                <Calendar size={12} className="text-slate-300 md:hidden" />
-                                                <span className="md:hidden">Last: </span>
-                                                {new Date(patient.updatedAt || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                                            </div>
-                                        </div>
+                                                <TableCell className="py-2.5">
+                                                    <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase tracking-widest font-mono">
+                                                        ID-{patient._id.slice(-6).toUpperCase()}
+                                                    </span>
+                                                </TableCell>
 
-                                        {/* ACTION */}
-                                        <div className="hidden md:flex w-16 justify-end pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                                                <ChevronRight size={16} />
-                                            </div>
-                                        </div>
-                                    </div>
+                                                <TableCell className="py-2.5 text-center">
+                                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-[9px] font-black uppercase tracking-wider border ${patient.prediction?.riskLevel === 'High'
+                                                        ? 'bg-red-50 text-red-700 border-red-100'
+                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                        }`}>
+                                                        <div className={`h-1.5 w-1.5 rounded-full ${patient.prediction?.riskLevel === 'High' ? 'bg-red-600' : 'bg-emerald-600'}`} />
+                                                        {patient.prediction?.riskLevel || "Low"} Risk
+                                                    </div>
+                                                </TableCell>
 
-                                </div>
-                            ))
-                        )}
-                    </div>
+                                                <TableCell className="py-2.5">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2" title={patient.email || "No email"}>
+                                                            <Mail size={11} className="text-slate-300" />
+                                                            <span className={`text-[10px] font-bold truncate max-w-[150px] uppercase tracking-tight ${!patient.email ? 'text-slate-400 italic' : 'text-slate-600'}`}>
+                                                                {patient.email || "Not Provided"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2" title={patient.phone || "No phone"}>
+                                                            <Phone size={11} className="text-slate-300" />
+                                                            <span className={`text-[10px] font-bold uppercase tracking-tight ${!patient.phone ? 'text-slate-400 italic' : 'text-slate-600'}`}>
+                                                                {patient.phone || "Not Provided"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+
+                                                <TableCell className="py-2.5 text-right px-6">
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                                                        {formattedDate}
+                                                    </span>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </Card>
 
                 </div>
                 <MobileNav />
