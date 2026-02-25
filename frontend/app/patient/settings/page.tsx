@@ -237,11 +237,7 @@ export default function PatientSettingsPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <Button onClick={handleLogout} variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                            <LogOut className="h-4.5 w-4.5" />
-                        </Button>
-                    </div>
+
                 </div>
             </header>
 
