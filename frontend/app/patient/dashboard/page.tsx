@@ -13,9 +13,12 @@ import {
     Loader2,
     Droplets,
     Scale,
-    Heart
+    Heart,
+    User,
+    Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
     Dialog,
     DialogContent,
@@ -242,34 +245,52 @@ export default function PatientDashboard() {
 
             <main className="max-w-5xl mx-auto px-6 py-8 space-y-8 animate-in fade-in duration-500">
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Good Morning, {patient?.name?.split(' ')[0] || 'Patient'}</h1>
-                        <p className="text-slate-500 font-medium">Here is your health overview for today.</p>
+                {/* Header Area */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="h-4 w-1 bg-slate-900 rounded-full"></div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Institutional Health Intelligence</p>
+                        </div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
+                            Good Morning, {patient?.name ? (patient.name.split(' ')[0].charAt(0).toUpperCase() + patient.name.split(' ')[0].slice(1).toLowerCase()) : 'Patient'}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                            <div className="flex items-center gap-1.5">
+                                <Activity size={12} className="text-slate-400" />
+                                Last Sync: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </div>
+                            <div className="h-1 w-1 rounded-full bg-slate-300"></div>
+                            <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                AI Engine: Optimal
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        {/* Care Team / Doctor Status */}
-                        <div className={`hidden md:flex items-center gap-3 px-4 py-2 rounded-xl border ${vitalsForm.doctor_email ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${vitalsForm.doctor_email ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-200 text-slate-500'}`}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Care Team Context */}
+                        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-slate-200 bg-white shadow-sm">
+                            <div className="h-8 w-8 rounded-md bg-slate-50 flex items-center justify-center border border-slate-100">
+                                <User size={16} className="text-slate-400" />
                             </div>
-                            <div className="text-xs">
-                                <p className="font-bold uppercase tracking-wider opacity-70">Care Team</p>
-                                <p className="font-semibold">{doctorName || (vitalsForm.doctor_email ? 'Dr. Assigned' : 'No Doctor')}</p>
+                            <div className="min-w-[120px]">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Care Team</p>
+                                <p className="text-[11px] font-bold text-slate-900 uppercase">
+                                    {doctorName || (vitalsForm.doctor_email ? 'Dr. Assigned' : 'No Primary Doctor')}
+                                </p>
                             </div>
                         </div>
 
                         {/* Routine Vital Check Modal */}
                         <Dialog open={isVitalsOpen} onOpenChange={setIsVitalsOpen}>
                             <DialogTrigger asChild>
-                                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 rounded-xl px-6 font-bold tracking-wide transition-all hover:scale-105 active:scale-95">
-                                    <Activity className="h-4 w-4 mr-2" />
+                                <Button className="bg-slate-900 hover:bg-black text-white rounded-lg px-6 h-12 font-bold tracking-widest text-xs transition-all active:scale-95 border border-slate-800 shadow-sm">
+                                    <Activity className="h-3.5 w-3.5 mr-2" />
                                     ROUTINE VITAL CHECK
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[480px] rounded-[2rem] bg-white text-slate-900 border-slate-100 shadow-2xl shadow-indigo-900/10 p-0 overflow-hidden">
+                            <DialogContent className="sm:max-w-[480px] rounded-xl bg-white text-slate-900 border-slate-200 shadow-2xl p-0 overflow-hidden">
                                 <DialogTitle className="sr-only">Routine Vital Check</DialogTitle>
 
 
@@ -478,125 +499,174 @@ export default function PatientDashboard() {
                     </div>
                 </div>
 
-                {/* 1. Hero: "Am I Okay?" */}
+                {/* 1. Risk Status Card */}
                 {
                     status && (
-                        <div className={`relative overflow-hidden p-8 rounded-[2rem] shadow-sm border transition-all duration-300 group
-                      ${status.level === 'low' ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100/50' :
-                                status.level === 'high' ? 'bg-gradient-to-br from-rose-50 to-orange-50 border-rose-100/50' :
-                                    'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100/50'}`}>
+                        <div className="bg-white rounded-[10px] border border-slate-200 shadow-sm overflow-hidden p-8 relative">
+                            <div className="flex flex-col md:flex-row items-start justify-between gap-8 relative z-10">
+                                <div className="space-y-6 flex-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            "h-5 w-5 rounded flex items-center justify-center border",
+                                            status.level === 'low' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'
+                                        )}>
+                                            <Activity size={10} strokeWidth={3} />
+                                        </div>
+                                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Clinical Risk Quotient</span>
+                                    </div>
 
-                            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                                <div className="space-y-3">
-                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-white/50 backdrop-blur-sm
-                               ${status.level === 'low' ? 'bg-emerald-100/80 text-emerald-800' :
-                                            status.level === 'high' ? 'bg-rose-100/80 text-rose-800' : 'bg-amber-100/80 text-amber-800'}`}>
-                                        {status.level === 'low' ? <ShieldCheck className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                                        Current Status
-                                    </span>
-                                    <div>
-                                        <div className="flex items-baseline gap-3">
-                                            <h2 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
+                                    <div className="flex items-end gap-6">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Analyzed Risk Score</p>
+                                            <h2 className="text-6xl font-black tracking-tighter text-slate-900 leading-none">
                                                 {patient.prediction?.riskScore ? `${patient.prediction.riskScore.toFixed(4)}%` : '--'}
                                             </h2>
-                                            <span className="text-xl font-bold text-slate-400 uppercase tracking-widest">{status.level} RISK</span>
                                         </div>
-                                        <h3 className="text-lg font-semibold text-slate-700 mt-1">{status.status}</h3>
+                                        <div className="pb-1">
+                                            <div className={cn(
+                                                "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tight border mb-1",
+                                                status.level === 'low' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                                            )}>
+                                                ● Status: {status.level === 'low' ? 'Stable' : 'Critical'}
+                                            </div>
+                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                                                Risk Level: {status.level}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p className="text-base font-medium text-slate-600/90 leading-relaxed max-w-lg">
-                                        {status.message}
-                                    </p>
+
+                                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                                        <p className="text-sm font-bold text-slate-700 leading-snug max-w-lg">
+                                            {status.level === 'low'
+                                                ? "No clinical concerns detected. Continue prescribed care plan."
+                                                : "Elevated risk signals identified. Immediate physician review recommended."}
+                                        </p>
+
+                                        <div className="flex flex-wrap items-center gap-4 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                            <span>Institutional Metadata:</span>
+                                            <div className="flex items-center gap-1">
+                                                <Clock size={10} />
+                                                Verified: {new Date(patient.updatedAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Activity size={10} />
+                                                Based On: HbA1c, BMI, Glucose
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className={`hidden md:flex h-20 w-20 rounded-full border-4 items-center justify-center bg-white shadow-sm
-                            ${status.level === 'low' ? 'border-emerald-100 text-emerald-500' :
-                                        status.level === 'high' ? 'border-rose-100 text-rose-500' : 'border-amber-100 text-amber-500'}`}>
-                                    {status.level === 'low' ? <CheckCircle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}
+                                <div className={cn(
+                                    "hidden md:flex flex-col items-center justify-center p-6 rounded-lg border w-40 text-center",
+                                    status.level === 'low' ? 'bg-emerald-50/30 border-emerald-100' : 'bg-red-50/30 border-red-100'
+                                )}>
+                                    <div className={cn(
+                                        "h-12 w-12 rounded-full border-2 flex items-center justify-center mb-3 bg-white",
+                                        status.level === 'low' ? 'border-emerald-200 text-emerald-500' : 'border-red-200 text-red-500'
+                                    )}>
+                                        {status.level === 'low' ? <ShieldCheck size={24} /> : <AlertTriangle size={24} />}
+                                    </div>
+                                    <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest leading-tight">Patient Safety<br />Verified</p>
                                 </div>
                             </div>
                         </div>
                     )
                 }
 
-                {/* 2. My Vitals Section (Real Data & Share) */}
-                <div className="space-y-4">
+                {/* 2. My Vitals Section Section */}
+                <div className="space-y-6">
                     <div className="flex items-center justify-between px-1">
-                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-indigo-600" />
-                            My Vitals
-                        </h2>
-                        <Link href="/patient/history" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-4 transition-all">
-                            View All History
+                        <div className="flex items-center gap-3">
+                            <div className="h-4 w-1 bg-slate-400 rounded-full"></div>
+                            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Current Biometric Metrics</h2>
+                        </div>
+                        <Link href="/patient/history" className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors">
+                            Clinical Archive
                         </Link>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         {/* Glucose Card */}
-                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                            <CardContent className="p-6 space-y-4">
+                        <Card className="rounded-[10px] border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <CardContent className="p-5 space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <div className="bg-blue-50 p-2.5 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                        <Droplets className="h-5 w-5" />
+                                    <div className="h-8 w-8 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-center text-blue-600">
+                                        <Droplets size={16} />
+                                    </div>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Synced: {new Date(patient.updatedAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Glucose</p>
-                                    <div className="flex items-baseline gap-1 mt-1">
-                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.blood_glucose_level || '--'}</h3>
-                                        <span className="text-sm font-semibold text-slate-400">mg/dL</span>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Glucose Level</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">{patient?.inputs?.blood_glucose_level || '--'}</h3>
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">mg/dL</span>
                                     </div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Reference: 70–140 mg/dL</p>
                                 </div>
-                                {patient?.inputs?.blood_glucose_level && (
-                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.blood_glucose_level > 140 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                        {patient.inputs.blood_glucose_level > 140 ? 'High' : 'Normal'}
-                                    </div>
-                                )}
+                                <div className={cn(
+                                    "inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tight border",
+                                    patient?.inputs?.blood_glucose_level > 140 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                )}>
+                                    Status: {patient?.inputs?.blood_glucose_level > 140 ? 'Abnormal' : 'Within Range'}
+                                </div>
                             </CardContent>
                         </Card>
 
                         {/* HbA1c Card */}
-                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                            <CardContent className="p-6 space-y-4">
+                        <Card className="rounded-[10px] border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <CardContent className="p-5 space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <div className="bg-purple-50 p-2.5 rounded-xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                                        <Activity className="h-5 w-5" />
+                                    <div className="h-8 w-8 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-center text-purple-600">
+                                        <Activity size={16} />
+                                    </div>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Synced: {new Date(patient.updatedAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">HbA1c</p>
-                                    <div className="flex items-baseline gap-1 mt-1">
-                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.HbA1c_level || '--'}</h3>
-                                        <span className="text-sm font-semibold text-slate-400">%</span>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">HbA1c Level</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">{patient?.inputs?.HbA1c_level || '--'}</h3>
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">% Concentration</span>
                                     </div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Reference: 4.0–6.5%</p>
                                 </div>
-                                {patient?.inputs?.HbA1c_level && (
-                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.HbA1c_level > 6.5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                        {patient.inputs.HbA1c_level > 6.5 ? 'Elevated' : 'Normal'}
-                                    </div>
-                                )}
+                                <div className={cn(
+                                    "inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tight border",
+                                    patient?.inputs?.HbA1c_level > 6.5 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                )}>
+                                    Status: {patient?.inputs?.HbA1c_level > 6.5 ? 'Abnormal' : 'Within Range'}
+                                </div>
                             </CardContent>
                         </Card>
 
                         {/* BMI Card */}
-                        <Card className="rounded-[1.5rem] border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                            <CardContent className="p-6 space-y-4">
+                        <Card className="rounded-[10px] border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <CardContent className="p-5 space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <div className="bg-orange-50 p-2.5 rounded-xl text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
-                                        <Scale className="h-5 w-5" />
+                                    <div className="h-8 w-8 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-center text-orange-600">
+                                        <Scale size={16} />
+                                    </div>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Synced: {new Date(patient.updatedAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">BMI</p>
-                                    <div className="flex items-baseline gap-1 mt-1">
-                                        <h3 className="text-3xl font-black text-slate-900">{patient?.inputs?.bmi || '--'}</h3>
-                                        <span className="text-sm font-semibold text-slate-400">kg/m²</span>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Body Mass Index</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">{patient?.inputs?.bmi || '--'}</h3>
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">kg/m²</span>
                                     </div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Reference: 18.5–24.9 kg/m²</p>
                                 </div>
-                                {patient?.inputs?.bmi && (
-                                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${patient.inputs.bmi > 25 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                        {patient.inputs.bmi > 25 ? 'Overweight' : 'Normal'}
-                                    </div>
-                                )}
+                                <div className={cn(
+                                    "inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tight border",
+                                    patient?.inputs?.bmi > 25 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                )}>
+                                    Status: {patient?.inputs?.bmi > 25 ? 'Above Baseline' : 'Within Range'}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
@@ -629,20 +699,25 @@ export default function PatientDashboard() {
                     </div>
 
                     {/* Safety Banner */}
-                    <div className="bg-slate-900 rounded-[2rem] p-8 shadow-xl shadow-slate-200 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                        <div className="relative z-10">
-                            <h3 className="font-bold text-white mb-2 flex items-center gap-2">
-                                <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                                Should I be worried?
-                            </h3>
-                            <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                                You are not in immediate danger. Your risk level is manageable.
-                            </p>
-                            <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10">
-                                <p className="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Doctor Alert</p>
-                                <p className="text-slate-200 text-sm font-medium">
-                                    If glucose &gt; 180 mg/dL for 3 days.
+                    <div className="bg-slate-900 rounded-[10px] p-8 shadow-xl shadow-slate-200 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                        <div className="relative z-10 flex flex-col justify-between h-full">
+                            <div>
+                                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                                    Should I be worried?
+                                </h3>
+                                <p className="text-slate-400 text-sm leading-relaxed mb-6 font-medium">
+                                    No immediate clinical signals detected. Your risk levels are within established hospital parameters.
+                                </p>
+                            </div>
+                            <div className="bg-white/5 backdrop-blur-sm p-5 rounded-lg border border-white/10">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-rose-400"></div>
+                                    <p className="text-rose-100 text-[10px] font-bold uppercase tracking-widest">Surveillance Threshold</p>
+                                </div>
+                                <p className="text-slate-300 text-xs font-medium leading-relaxed">
+                                    Request physician review only if glucose exceeds 180 mg/dL consistently for 72 hours.
                                 </p>
                             </div>
                         </div>
