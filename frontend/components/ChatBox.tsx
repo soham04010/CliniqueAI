@@ -196,55 +196,59 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
   );
 
   return (
-    <div className="flex h-full bg-white overflow-hidden relative border border-slate-200/60 rounded-xl">
+    <div className="flex h-full bg-white overflow-hidden relative border border-slate-200/60 rounded-lg">
       <TooltipProvider>
         {/* 1. LEFT CONTACT LIST */}
         <div className={`w-full md:w-80 lg:w-96 border-r border-slate-100 bg-white flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
-          <div className="p-5 border-b border-slate-50 flex items-center justify-between">
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Messaging</h2>
-            <div className="h-6 w-6 bg-teal-50 rounded-full flex items-center justify-center text-teal-600 text-[10px] font-black ring-1 ring-teal-100/50">
-              {filteredContacts.length}
+          <div className="p-4 px-6 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Archive</h2>
+            <div className="px-2 py-0.5 bg-slate-50 rounded text-slate-400 text-[9px] font-black border border-slate-100 uppercase tracking-tighter">
+              Synchronized
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-0 space-y-0">
             {filteredContacts.map((contact) => (
               <div
                 key={contact._id}
                 onClick={() => setActiveChat(contact)}
-                className={`p-3.5 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all duration-300 border mb-1 ${activeChat?._id === contact._id
-                  ? "bg-teal-50/50 border-teal-100/50 shadow-sm"
-                  : "border-transparent hover:bg-slate-50/80 hover:border-slate-100/50"
+                className={`w-full relative px-6 py-4 flex items-center gap-3.5 cursor-pointer transition-all duration-200 border-b border-slate-50/50 group ${activeChat?._id === contact._id
+                  ? "bg-slate-50/80"
+                  : "hover:bg-slate-50/50"
                   }`}
               >
+                {activeChat?._id === contact._id && (
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-slate-900 rounded-r-full" />
+                )}
                 <div className="relative">
-                  <Avatar className="h-11 w-11 ring-2 ring-white shadow-sm border border-slate-100">
+                  <Avatar className="h-10 w-10 border border-slate-200 rounded-md">
                     <AvatarImage src={contact.profilePicture || contact.avatar} className="object-cover" />
-                    <AvatarFallback className={`font-black text-xs ${activeChat?._id === contact._id ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+                    <AvatarFallback className={`font-black text-xs rounded-md ${activeChat?._id === contact._id ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-400"}`}>
                       {contact.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="absolute bottom-0 right-0 h-3 w-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm"></span>
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-0.5">
-                    <p className={`text-[13px] font-black truncate leading-tight ${activeChat?._id === contact._id ? "text-teal-950" : "text-slate-800"}`}>
+                    <p className={`text-xs font-bold truncate tracking-tight uppercase ${activeChat?._id === contact._id ? "text-slate-900" : "text-slate-600"}`}>
                       {contact.name}
                     </p>
-                    <span className="text-[10px] text-slate-400 font-bold tabular-nums">
-                      {contact.lastMessage?.timestamp ? new Date(contact.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    <span className="text-[9px] text-slate-400 font-bold tabular-nums uppercase">
+                      {contact.lastMessage?.timestamp ? new Date(contact.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : ''}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <p className={`text-[11px] truncate flex-1 mr-2 ${contact.unreadCount > 0 ? "text-slate-900 font-bold" : "text-slate-500 font-medium"}`}>
-                      {contact.lastMessage?.message || (currentUser?.role === 'patient' && contact.role === 'doctor' ? 'Consulting Physician' :
-                        currentUser?.role === 'doctor' && contact.role === 'patient' ? 'Patient' : 'Clinique User')}
+                    <p className={`text-[10px] truncate flex-1 mr-4 font-bold uppercase tracking-tight ${contact.unreadCount > 0 ? "text-slate-900" : "text-slate-400"}`}>
+                      {contact.lastMessage?.message || (currentUser?.role === 'patient' && contact.role === 'doctor' ? 'Clinical Channel' :
+                        currentUser?.role === 'doctor' && contact.role === 'patient' ? 'Patient Channel' : 'Clinique Hub')}
                     </p>
                     {contact.unreadCount > 0 && (
-                      <span className="h-4.5 min-w-[18px] px-1 bg-[#00A884] text-white text-[9px] font-black rounded-full flex items-center justify-center animate-in zoom-in-50 duration-300 shadow-sm shadow-emerald-200">
-                        {contact.unreadCount}
-                      </span>
+                      <div className="flex items-center gap-1 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
+                        <div className="h-1 w-1 rounded-full bg-rose-500 animate-pulse"></div>
+                        <span className="text-rose-600 text-[8px] font-black uppercase">{contact.unreadCount} Unread</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -258,30 +262,42 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
           {activeChat ? (
             <>
               {/* PROFESSIONAL HEADER REDESIGN */}
-              <div className="h-18 border-b border-slate-100 bg-white px-4 md:px-6 flex items-center justify-between z-20 shadow-sm shadow-slate-100/20">
-                <div className="flex items-center gap-3 md:gap-4">
+              <div className="h-20 border-b border-slate-100 bg-white px-4 md:px-8 flex items-center justify-between z-20">
+                <div className="flex items-center gap-4">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="md:hidden h-9 w-9 text-slate-400 hover:bg-slate-50 rounded-2xl"
+                    className="md:hidden h-8 w-8 text-slate-400 hover:bg-slate-50 rounded-md"
                     onClick={() => setActiveChat(null)}
                   >
-                    <ArrowLeft size={18} />
+                    <ArrowLeft size={16} />
                   </Button>
 
                   <div className="relative">
-                    <Avatar className="h-10 w-10 ring-1 ring-slate-100">
+                    <Avatar className="h-10 w-10 border border-slate-200 rounded-md">
                       <AvatarImage src={activeChat.profilePicture || activeChat.avatar} className="object-cover" />
-                      <AvatarFallback className="bg-teal-50 text-teal-600 font-black text-xs">{activeChat.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback className="bg-slate-50 text-slate-400 font-black text-xs rounded-md">{activeChat.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+                    <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-500 border-2 border-white rounded-full"></div>
                   </div>
 
-                  <div>
-                    <h3 className="font-black text-slate-900 text-[14px] leading-tight flex items-center gap-1.5">
-                      {activeChat.name}
-                    </h3>
-                    <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">Active Session</p>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-900 text-[13px] uppercase tracking-tight">
+                        {activeChat.name}
+                      </h3>
+                      <div className="h-1 w-1 rounded-full bg-slate-300"></div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Session</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                      <div className="flex items-center gap-1">
+                        <UserIcon size={10} className="text-slate-300" /> {activeChat.role || 'Clinician'}
+                      </div>
+                      <div className="h-3 w-[1px] bg-slate-100"></div>
+                      <div className="flex items-center gap-1 text-emerald-600">
+                        <span className="text-[11px]">🔒</span> Secure End-to-End Channel
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -292,49 +308,61 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
                         <Button
                           onClick={handleViewPatientInfo}
                           variant="outline"
-                          className="hidden sm:flex h-9 border-slate-300 bg-white text-slate-900 hover:bg-slate-50 text-sm font-bold rounded-xl px-4 gap-2 shadow-none transition-none"
+                          className="hidden sm:flex h-8 border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[10px] font-black uppercase tracking-widest rounded-md px-4 gap-2 shadow-none transition-none"
                         >
-                          <LayoutDashboard size={14} className="text-teal-600" /> Patient Chart
+                          <LayoutDashboard size={12} className="text-slate-400" /> Patient Chart
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Open Patient Chart</TooltipContent>
                     </Tooltip>
                   )}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={deleteChat}
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-none"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Clear Chat</TooltipContent>
-                  </Tooltip>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={deleteChat}
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Purge Clinical History</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
 
               {/* MESSAGING CANVAS */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 bg-slate-50/70 custom-scrollbar-hide">
+              <div className="flex-1 overflow-y-auto p-6 space-y-2 bg-[#FBFDFF] custom-scrollbar-hide">
+                <div className="flex items-center justify-center py-4 mb-4">
+                  <div className="px-4 py-1.5 rounded-full border border-slate-100 bg-white text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                    <span className="text-emerald-500">🔒</span> Secure Channel • Retained in Medical Record
+                  </div>
+                </div>
+
                 {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full opacity-30 select-none">
-                    <MessageSquare size={48} className="text-slate-300 mb-2" />
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">End-to-End Encrypted</p>
+                  <div className="flex flex-col items-center justify-center h-[60%] opacity-40 select-none">
+                    <div className="h-16 w-16 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center mb-4">
+                      <MessageSquare size={32} className="text-slate-200" />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Validated Diagnostic Channel</p>
                   </div>
                 )}
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.isMe ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                    <div className={`max-w-[75%] sm:max-w-[65%] p-3.5 px-4.5 rounded-2xl text-[14px] relative ring-1 ${msg.isMe
-                      ? "bg-teal-950 text-white rounded-tr-none ring-teal-900/50 shadow-md shadow-teal-950/20"
-                      : "bg-white text-slate-800 rounded-tl-none ring-slate-100 shadow-sm"
+                  <div key={i} className={`flex flex-col ${msg.isMe ? "items-end" : "items-start"} animate-in fade-in duration-300 mb-2`}>
+                    <div className={`max-w-[75%] sm:max-w-[60%] p-3.5 px-4 rounded-lg text-sm relative border ${msg.isMe
+                      ? "bg-white text-slate-900 border-slate-200 shadow-sm"
+                      : "bg-slate-50/50 text-slate-900 border-slate-100 shadow-none"
                       }`}>
-                      <p className="leading-relaxed font-medium tracking-tight whitespace-pre-wrap">{msg.message}</p>
-                      <div className={`text-[9px] mt-1.5 font-bold tabular-nums opacity-60 flex items-center gap-1 ${msg.isMe ? "justify-end text-white" : "justify-start text-slate-400"}`}>
-                        {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
+                      <p className="leading-snug font-medium tracking-tight whitespace-pre-wrap">{msg.message}</p>
+                    </div>
+                    <div className={`flex items-center gap-2 mt-1 px-1 text-[9px] font-bold tabular-nums uppercase tracking-tighter text-slate-400 ${msg.isMe ? "flex-row-reverse" : "flex-row"}`}>
+                      <span>{new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                      <div className="h-1 w-1 rounded-full bg-slate-200"></div>
+                      <span className="opacity-70">{msg.isMe ? "● Seen" : "● Read"}</span>
                     </div>
                   </div>
                 ))}
@@ -342,36 +370,46 @@ export default function ChatBox({ senderId, receiverId, receiverName, searchQuer
               </div>
 
               {/* INPUT HUB */}
-              <div className="p-4 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
-                <div className="flex gap-3 items-end max-w-5xl mx-auto w-full">
-                  <div className="flex-1 relative bg-slate-50/50 rounded-2xl border border-slate-100/80 focus-within:border-teal-500/50 focus-within:bg-white focus-within:ring-4 focus-within:ring-teal-500/5 transition-all duration-300">
-                    <textarea
-                      value={message}
-                      onChange={(e) => {
-                        setMessage(e.target.value);
-                        e.target.style.height = 'auto';
-                        e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px';
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          sendMessage();
-                          const target = e.target as HTMLTextAreaElement;
-                          target.style.height = 'auto';
-                        }
-                      }}
-                      placeholder="Type a clinical instruction..."
-                      rows={1}
-                      className="w-full bg-transparent border-none focus:outline-none px-5 py-4 text-[14px] text-slate-800 font-medium placeholder:text-slate-400/80 resize-none max-h-[180px] min-h-[52px] block custom-scrollbar"
-                    />
+              <div className="p-4 bg-white border-t border-slate-100">
+                <div className="max-w-5xl mx-auto space-y-3">
+                  <div className="flex gap-3 items-end w-full">
+                    <div className="flex-1 relative bg-white rounded-lg border border-slate-200 focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition-all duration-200">
+                      <textarea
+                        value={message}
+                        onChange={(e) => {
+                          setMessage(e.target.value);
+                          e.target.style.height = 'auto';
+                          e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px';
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                          }
+                        }}
+                        placeholder="Type secure clinical message..."
+                        rows={1}
+                        className="w-full bg-transparent border-none focus:outline-none px-4 py-3.5 text-sm text-slate-800 font-medium placeholder:text-slate-400 resize-none max-h-[180px] min-h-[48px] block custom-scrollbar"
+                      />
+                    </div>
+                    <Button
+                      onClick={sendMessage}
+                      disabled={!message.trim()}
+                      className="h-12 w-12 p-0 rounded-lg bg-slate-900 hover:bg-black text-white shadow-sm flex-none mb-0.5 active:scale-95 transition-all"
+                    >
+                      <Send size={18} />
+                    </Button>
                   </div>
-                  <Button
-                    onClick={sendMessage}
-                    disabled={!message.trim()}
-                    className="h-13 w-13 p-0 rounded-2xl bg-teal-950 hover:bg-black text-white shadow-xl shadow-teal-950/20 active:scale-95 transition-all flex-none mb-0.5 group"
-                  >
-                    <Send className="h-5 w-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </Button>
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      <span className="text-emerald-500">🔒</span> Messages are encrypted and stored in medical record.
+                    </div>
+                    <div className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                      Audit ID: {activeChat._id?.slice(-8).toUpperCase()}
+                    </div>
+                  </div>
                 </div>
               </div>
             </>

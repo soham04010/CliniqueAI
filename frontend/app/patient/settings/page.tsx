@@ -222,33 +222,24 @@ export default function PatientSettingsPage() {
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-12">
 
             {/* Header */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button onClick={() => router.back()} variant="ghost" size="icon" className="text-slate-500 hover:text-slate-900">
+                        <Button onClick={() => router.back()} variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
-                        <div className="flex items-center gap-2">
-                            <div className="bg-indigo-600 p-1.5 rounded-lg">
-                                <Activity className="h-5 w-5 text-white" />
+                        <div className="h-8 w-[1px] bg-slate-100 mx-1 hidden sm:block"></div>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-lg tracking-tight text-slate-900">Settings</span>
                             </div>
-                            <span className="font-bold text-lg tracking-tight text-slate-900">Settings</span>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">System Protocol & Security</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <div className="hidden sm:flex items-center gap-3 text-right">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                                <p className="text-xs text-slate-500">Patient Account</p>
-                            </div>
-                            <Avatar className="h-9 w-9 border border-slate-200 cursor-pointer hover:opacity-80 transition-opacity">
-                                <AvatarImage src={photoPreview || user?.profilePicture} className="object-cover" />
-                                <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user?.name?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        </div>
-                        <Button onClick={handleLogout} variant="ghost" size="icon" className="text-slate-400 hover:text-red-600 hover:bg-red-50">
-                            <LogOut className="h-5 w-5" />
+                        <Button onClick={handleLogout} variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                            <LogOut className="h-4.5 w-4.5" />
                         </Button>
                     </div>
                 </div>
@@ -257,34 +248,40 @@ export default function PatientSettingsPage() {
             {/* Main Content */}
             <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Account Settings</h1>
-                    <p className="text-slate-500">Manage your personal profile and security preferences.</p>
+                <div className="space-y-0.5 mb-2">
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Account Protocols</h1>
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest border border-slate-200">Production Node</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Administrative Management & Security Access</p>
                 </div>
 
                 {/* 1. Profile Information Card */}
-                <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <User className="h-4 w-4 text-indigo-600" />
-                            Profile Information
+                <Card className="border border-slate-200 shadow-none bg-white overflow-hidden rounded-lg">
+                    <CardHeader className="bg-slate-50/30 border-b border-slate-100 py-4">
+                        <CardTitle className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                                <User className="h-3.5 w-3.5" />
+                                Personal Identity
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-emerald-600 text-[9px] font-black uppercase tracking-tighter">
+                                <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse"></div> Verified Record
+                            </div>
                         </CardTitle>
-                        <CardDescription>Visible to your doctors.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
 
-                        {/* Photo Upload Section */}
                         <div className="flex items-center gap-6">
                             <div className="relative group">
-                                <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+                                <Avatar className="h-20 w-20 border border-slate-100 rounded-lg">
                                     <AvatarImage src={photoPreview || user?.profilePicture} className="object-cover" />
-                                    <AvatarFallback className="text-2xl bg-indigo-100 text-indigo-600">{user?.name?.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback className="text-xl bg-slate-50 text-slate-400 font-black rounded-lg">{user?.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="absolute bottom-0 right-0 bg-indigo-600 p-2 rounded-full text-white cursor-pointer shadow-md hover:bg-indigo-700 transition-colors"
+                                    className="absolute -bottom-1 -right-1 bg-slate-900 p-2 rounded-md text-white cursor-pointer shadow-md hover:bg-black transition-colors"
                                 >
-                                    <Camera className="h-4 w-4" />
+                                    <Camera className="h-3.5 w-3.5" />
                                 </div>
                                 <input
                                     type="file"
@@ -294,59 +291,58 @@ export default function PatientSettingsPage() {
                                     onChange={handlePhotoSelect}
                                 />
                             </div>
-                            <div className="space-y-1">
-                                <h3 className="font-medium text-slate-900">Profile Photo</h3>
-                                <p className="text-xs text-slate-500 max-w-[200px]">
-                                    Supports JPG, PNG or WEBP. Max size 5MB.
+                            <div className="space-y-0.5">
+                                <h3 className="text-xs font-bold text-slate-900 uppercase">Operational Identity</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[200px]">
+                                    Clinical Media Assets • 5MB Limit
                                 </p>
                             </div>
                         </div>
 
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-6 md:grid-cols-2">
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                                <Label htmlFor="name" className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Full Legal Name</Label>
+                                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="rounded-md border-slate-200 text-sm font-medium" />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input id="email" value={email} disabled className="bg-slate-50 text-slate-500 cursor-not-allowed" />
+                                <Label htmlFor="email" className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Primary Endpoint Email</Label>
+                                <Input id="email" value={email} disabled className="bg-slate-50 text-slate-400 cursor-not-allowed rounded-md border-slate-200 text-sm font-medium" />
                             </div>
                         </div>
 
                         <div className="pt-2 flex justify-end">
-                            <Button onClick={handleUpdateProfile} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
-                                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Save Profile
+                            <Button onClick={handleUpdateProfile} disabled={saving} className="bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-md px-6 shadow-sm">
+                                {saving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5 shadow-none" />}
+                                Synchronize Identity
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* 2. Security Card (Password) */}
-                <Card className="border border-slate-200 shadow-sm bg-white">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Lock className="h-4 w-4 text-indigo-600" />
-                            Security
+                <Card className="border border-slate-200 shadow-none bg-white rounded-lg">
+                    <CardHeader className="bg-slate-50/30 border-b border-slate-100 py-4">
+                        <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            <Lock className="h-3.5 w-3.5" />
+                            Access Protocols
                         </CardTitle>
-                        <CardDescription>Password updates require email verification.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4 pt-6">
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-6 md:grid-cols-2">
                             <div className="grid gap-2">
-                                <Label htmlFor="current">Current Password</Label>
-                                <Input id="current" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                                <Label htmlFor="current" className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Current Password</Label>
+                                <Input id="current" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="rounded-md border-slate-200" />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="new">New Password</Label>
-                                <Input id="new" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                                <Label htmlFor="new" className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">New Complex Password</Label>
+                                <Input id="new" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="rounded-md border-slate-200" />
                             </div>
                         </div>
                         <div className="pt-2 flex justify-end">
                             <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-                                <Button onClick={handleInitiatePasswordChange} disabled={saving} variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50">
-                                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Update Password
+                                <Button onClick={handleInitiatePasswordChange} disabled={saving} variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-md px-6 shadow-none">
+                                    {saving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                                    Initiate Secure Update
                                 </Button>
                                 <DialogContent className="bg-white">
                                     <DialogHeader>
@@ -372,30 +368,29 @@ export default function PatientSettingsPage() {
                 </Card>
 
                 {/* 3. Phone Number Card (SMS) */}
-                <Card className="border border-slate-200 shadow-sm bg-white">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Phone className="h-4 w-4 text-indigo-600" />
-                            Mobile Verification
+                <Card className="border border-slate-200 shadow-none bg-white rounded-lg">
+                    <CardHeader className="bg-slate-50/30 border-b border-slate-100 py-4">
+                        <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            <Phone className="h-3.5 w-3.5" />
+                            Mobile Authentication
                         </CardTitle>
-                        <CardDescription>Add a number for SMS alerts.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4 pt-6">
                         <div className="grid gap-2">
-                            <Label>Mobile Number</Label>
+                            <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Secondary Authentication Link</Label>
                             <div className="flex items-center gap-4">
                                 <div className="relative flex-1">
-                                    <Input value={user?.mobileNumber || "Not Verified"} disabled className="bg-slate-50 pl-10" />
+                                    <Input value={user?.mobileNumber || "PROTOCOL_PENDING"} disabled className="bg-slate-50 border-slate-200 pl-10 rounded-md text-xs font-black uppercase tracking-wider" />
                                     {user?.isMobileVerified ? (
                                         <CheckCircle className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
                                     ) : (
-                                        <AlertTriangle className="absolute left-3 top-2.5 h-4 w-4 text-amber-500" />
+                                        <AlertTriangle className="absolute left-3 top-2.5 h-3.5 w-3.5 text-amber-500" />
                                     )}
                                 </div>
                                 <Dialog open={isPhoneDialogOpen} onOpenChange={setIsPhoneDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 min-w-[100px]">
-                                            {user?.mobileNumber ? "Change" : "Add Number"}
+                                        <Button variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-md px-6 shadow-none">
+                                            {user?.mobileNumber ? "Update Link" : "Activate SMS"}
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent className="bg-white z-50 shadow-xl">
