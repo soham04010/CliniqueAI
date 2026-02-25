@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import BrandedLoading from "@/components/shared/BrandedLoading";
 
 // TYPES
 interface Patient {
@@ -141,9 +142,7 @@ export default function ReportsPage() {
 
 
     if (loading) return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-            <Loader2 className="animate-spin h-8 w-8 text-teal-600" />
-        </div>
+        <BrandedLoading message="Generating Clinical Outcomes Report..." />
     );
 
     return (

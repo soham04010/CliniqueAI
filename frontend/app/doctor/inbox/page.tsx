@@ -7,6 +7,7 @@ import Header from "@/components/doctor/Header";
 import ChatBox from "@/components/ChatBox";
 import { MobileNav } from "@/components/shared/MobileNav";
 import { Loader2 } from "lucide-react";
+import BrandedLoading from "@/components/shared/BrandedLoading";
 
 // 1. Inner Component: Contains all the original logic that relies on searchParams
 function InboxContent() {
@@ -62,9 +63,7 @@ export default function DoctorInboxPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen w-full items-center justify-center bg-slate-50">
-          <Loader2 className="h-10 w-10 animate-spin text-teal-600" />
-        </div>
+        <BrandedLoading message="Connecting to Secure Messenger..." />
       }
     >
       <InboxContent />

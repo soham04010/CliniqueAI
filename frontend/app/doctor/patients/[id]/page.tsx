@@ -35,6 +35,7 @@ import {
 } from 'recharts';
 import api from "@/lib/api";
 import { toast } from "sonner";
+import BrandedLoading from "@/components/shared/BrandedLoading";
 
 // Components
 import Sidebar from "@/components/doctor/Sidebar";
@@ -272,9 +273,7 @@ export default function PatientDetailsPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <Loader2 className="animate-spin h-6 w-6 text-slate-400" />
-    </div>
+    <BrandedLoading message="Analyzing Clinical Record..." />
   );
 
   if (!patient) return null;
@@ -501,128 +500,170 @@ export default function PatientDetailsPage() {
                 </CardContent>
               </Card>
 
-              {/* Additional Metadata Card (Editable) */}
-              <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between py-3 px-4 bg-slate-50 border-b border-slate-100">
-                  <h3 className="font-semibold text-slate-700 text-sm">Patient Details</h3>
+              {/* Patient Details Card (Editable) */}
+              <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between py-4 px-6 bg-slate-50/50 border-b border-slate-100">
+                  <div className="space-y-1">
+                    <CardTitle className="text-sm font-bold text-slate-900 uppercase tracking-widest">Patient Details</CardTitle>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Clinical Profile • {new Date(patient.updatedAt || patient.createdAt).toLocaleDateString()}</p>
+                  </div>
                   {!isEditingMetadata && (
-                    <Button onClick={startMetadataEdit} variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700">
-                      <Edit2 size={12} />
+                    <Button
+                      onClick={startMetadataEdit}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-900 transition-all focus:ring-2 focus:ring-slate-900/10"
+                      title="Edit Details"
+                    >
+                      <Edit2 size={14} />
                     </Button>
                   )}
                 </CardHeader>
-                <CardContent className="p-4 space-y-4">
+                <CardContent className="p-0">
                   {isEditingMetadata ? (
                     /* EDIT MODE */
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Gender</Label>
-                          <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, gender: val })} value={metadataForm.gender}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-white z-50"><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent>
+                    <div className="p-6 space-y-6">
+                      <div className="space-y-4">
+                        <div className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          <div className="h-3 w-0.5 bg-slate-900" /> Clinical Identity
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Gender</Label>
+                            <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, gender: val })} value={metadataForm.gender}>
+                              <SelectTrigger className="h-10 text-xs border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-slate-900/10"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-white z-50 shadow-xl border-slate-200">
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Age</Label>
+                            <Input type="number" className="h-10 text-xs border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-slate-900/10" value={metadataForm.age} onChange={(e) => setMetadataForm({ ...metadataForm, age: e.target.value })} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          <div className="h-3 w-0.5 bg-slate-900" /> Risk Exposure
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Smoking Status</Label>
+                          <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, smoking_history: val })} value={metadataForm.smoking_history}>
+                            <SelectTrigger className="h-10 text-xs border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-slate-900/10"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-white z-50 shadow-xl border-slate-200">
+                              <SelectItem value="never">Never</SelectItem>
+                              <SelectItem value="current">Current</SelectItem>
+                              <SelectItem value="former">Former</SelectItem>
+                              <SelectItem value="not current">Not Current</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Age</Label>
-                          <Input type="number" className="h-8 text-xs" value={metadataForm.age} onChange={(e) => setMetadataForm({ ...metadataForm, age: e.target.value })} />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Hypertension</Label>
+                            <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, hypertension: val })} value={metadataForm.hypertension}>
+                              <SelectTrigger className="h-10 text-xs border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-slate-900/10"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-white z-50 border-slate-200"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Heart Disease</Label>
+                            <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, heart_disease: val })} value={metadataForm.heart_disease}>
+                              <SelectTrigger className="h-10 text-xs border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-slate-900/10"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-white z-50 border-slate-200"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase font-bold text-slate-500">Smoking Status</Label>
-                        <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, smoking_history: val })} value={metadataForm.smoking_history}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-white z-50">
-                            <SelectItem value="never">Never</SelectItem>
-                            <SelectItem value="current">Current</SelectItem>
-                            <SelectItem value="former">Former</SelectItem>
-                            <SelectItem value="not current">Not Current</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Hypertension</Label>
-                          <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, hypertension: val })} value={metadataForm.hypertension}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-white z-50"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
-                          </Select>
+                      <div className="pt-4 border-t border-slate-100 space-y-4">
+                        <div className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          <div className="h-3 w-0.5 bg-slate-900" /> Administrative Contact
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Heart Disease</Label>
-                          <Select onValueChange={(val) => setMetadataForm({ ...metadataForm, heart_disease: val })} value={metadataForm.heart_disease}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-white z-50"><SelectItem value="0">No</SelectItem><SelectItem value="1">Yes</SelectItem></SelectContent>
-                          </Select>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Email Address</Label>
+                          <Input className="h-10 text-xs border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-slate-900/10" value={metadataForm.email} onChange={(e) => setMetadataForm({ ...metadataForm, email: e.target.value })} placeholder="patient@example.com" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Phone Number</Label>
+                          <Input className="h-10 text-xs border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-slate-900/10" value={metadataForm.phone} onChange={(e) => setMetadataForm({ ...metadataForm, phone: e.target.value })} placeholder="+1 234 567 890" />
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 space-y-3">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Email</Label>
-                          <Input className="h-8 text-xs" value={metadataForm.email} onChange={(e) => setMetadataForm({ ...metadataForm, email: e.target.value })} placeholder="patient@example.com" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Phone</Label>
-                          <Input className="h-8 text-xs" value={metadataForm.phone} onChange={(e) => setMetadataForm({ ...metadataForm, phone: e.target.value })} placeholder="+1 234 567 890" />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setIsEditingMetadata(false)} size="sm" className="flex-1 h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50">
+                      <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                        <Button variant="outline" onClick={() => setIsEditingMetadata(false)} size="sm" className="flex-1 h-10 text-[10px] font-bold uppercase tracking-widest border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-all">
                           Cancel
                         </Button>
-                        <Button onClick={saveMetadata} size="sm" className="flex-1 h-8 bg-slate-900 hover:bg-slate-800 text-white text-xs shadow-sm">
-                          Save Changes
+                        <Button onClick={saveMetadata} size="sm" className="flex-1 h-10 bg-slate-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-xl shadow-sm transition-all border-none">
+                          Save Update
                         </Button>
                       </div>
                     </div>
                   ) : (
                     /* VIEW MODE */
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Gender</span>
-                        <span className="font-medium text-slate-900 capitalize">{patient.inputs?.gender === 1 ? 'Male' : 'Female'}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Age</span>
-                        <span className="font-medium text-slate-900">{patient.inputs?.age} yrs</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Smoking Status</span>
-                        <span className="font-medium text-slate-900 capitalize">
-                          {patient.inputs?.smoking_history_current ? 'Current' :
-                            patient.inputs?.smoking_history_former ? 'Former' :
-                              patient.inputs?.smoking_history_never ? 'Never' :
-                                patient.inputs?.["smoking_history_not current"] ? 'Not Current' : 'Unknown'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Hypertension</span>
-                        <span className={`font-medium ${patient.inputs?.hypertension === 1 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {patient.inputs?.hypertension === 1 ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Heart Disease</span>
-                        <span className={`font-medium ${patient.inputs?.heart_disease === 1 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {patient.inputs?.heart_disease === 1 ? 'Yes' : 'No'}
-                        </span>
+                    <div className="divide-y divide-slate-100">
+                      {/* SUBSECTION: DEMOGRAPHICS */}
+                      <div className="p-6 space-y-3">
+                        <h6 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Demographics</h6>
+                        <div className="grid grid-cols-[140px_1fr] items-center text-xs">
+                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Gender</span>
+                          <span className="font-bold text-slate-900 capitalize px-3 py-1 bg-slate-50 rounded border border-slate-100 inline-block w-fit min-w-[80px] text-center">{patient.inputs?.gender === 1 ? 'Male' : 'Female'}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_1fr] items-center text-xs">
+                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Current Age</span>
+                          <span className="font-bold text-slate-900 uppercase tracking-tight">{patient.inputs?.age || "Not Provided"} <span className="text-[9px] text-slate-400 font-medium">Years</span></span>
+                        </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100"></div>
+                      {/* SUBSECTION: RISK FACTORS */}
+                      <div className="p-6 space-y-3">
+                        <h6 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Clinical risk factors</h6>
+                        <div className="grid grid-cols-[140px_1fr] items-center text-xs">
+                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Smoking Profile</span>
+                          <span className="font-bold text-slate-900 capitalize">
+                            {patient.inputs?.smoking_history_current ? 'Current' :
+                              patient.inputs?.smoking_history_former ? 'Former' :
+                                patient.inputs?.smoking_history_never ? 'Never' :
+                                  patient.inputs?.["smoking_history_not current"] ? 'Not Current' : (
+                                    <span className="text-slate-400 italic font-medium">Not Provided</span>
+                                  )}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-[140px_1fr] items-center text-xs">
+                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Hypertension</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase inline-block border w-fit min-w-[80px] text-center ${patient.inputs?.hypertension === 1 ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                            {patient.inputs?.hypertension === 1 ? 'Positive' : 'Negative'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-[140px_1fr] items-center text-xs">
+                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Heart Disease</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase inline-block border w-fit min-w-[80px] text-center ${patient.inputs?.heart_disease === 1 ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                            {patient.inputs?.heart_disease === 1 ? 'Detected' : 'Negative'}
+                          </span>
+                        </div>
+                      </div>
 
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Email</span>
-                        <span className="font-medium text-slate-900 text-xs truncate max-w-[150px]">{patient.email || "N/A"}</span>
+                      {/* SUBSECTION: CONTACT */}
+                      <div className="p-6 space-y-3">
+                        <h6 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Contact information</h6>
+                        <div className="grid grid-cols-[140px_1fr] items-center text-xs">
+                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Verified Email</span>
+                          <span className="font-bold text-slate-900 truncate max-w-full">
+                            {patient.email ? patient.email : <span className="text-slate-400 italic font-medium">Not Provided</span>}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-[140px_1fr] items-center text-xs">
+                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Primary Phone</span>
+                          <span className="font-bold text-slate-900">
+                            {patient.phone ? patient.phone : <span className="text-slate-400 italic font-medium">Not Provided</span>}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Phone</span>
-                        <span className="font-medium text-slate-900 text-xs">{patient.phone || "N/A"}</span>
-                      </div>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>

@@ -18,6 +18,7 @@ import {
     Phone,
     FileDown
 } from "lucide-react";
+import BrandedLoading from "@/components/shared/BrandedLoading";
 import Sidebar from "@/components/doctor/Sidebar";
 import Header from "@/components/doctor/Header";
 import { MobileNav } from "@/components/shared/MobileNav";
@@ -114,9 +115,7 @@ export default function PatientsPage() {
     const activeCount = patients.length;
 
     if (loading) return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-            <Loader2 className="animate-spin h-8 w-8 text-teal-600" />
-        </div>
+        <BrandedLoading message="Fetching Patient Directory..." />
     );
 
     return (
