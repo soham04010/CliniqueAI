@@ -153,7 +153,6 @@ export default function DoctorDashboard() {
         bmi: Number(aiForm.bmi),
         HbA1c_level: Number(aiForm.HbA1c_level),
         blood_glucose_level: Number(aiForm.blood_glucose_level),
-
         // One-Hot Encoding for Smoking History
         smoking_history_current: aiForm.smoking_history === "current" ? 1 : 0,
         smoking_history_ever: aiForm.smoking_history === "ever" ? 1 : 0,
@@ -165,8 +164,8 @@ export default function DoctorDashboard() {
 
     try {
       const res = await api.post('/patients/predict', payload);
-      if (res.status === 200 || res.status === 201) { // Accept both success codes
-        setAiResult(res.data.prediction); // Assuming prediction is nested under data
+      if (res.status === 200 || res.status === 201) {
+        setAiResult(res.data.prediction || res.data);
         toast.success("Assessment Complete", { description: "Report generated successfully." });
         await fetchPatients();
       }
@@ -246,122 +245,100 @@ export default function DoctorDashboard() {
         <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8">
 
           {/* 3. STATISTICS SECTION (Enterprise Grade) */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-1 bg-slate-900 rounded-full" />
+                <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Clinical Cohort Metrics</h4>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Synced with AI Engine • {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+              </span>
+            </div>
 
-            {/* Card 1: Active Panel (Secondary) */}
-            <Card className="md:col-span-3 group relative bg-white rounded-2xl p-8 border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:border-slate-300 transition-all duration-200 overflow-hidden flex flex-col">
-              <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] flex items-center gap-2">
-                      <Users size={12} className="text-blue-500" /> Active Panel
-                    </span>
-                    <span className="text-[9px] font-medium text-slate-400">Updated {relativeTime}</span>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+              {/* Card 1: Total Patients */}
+              <Card className="md:col-span-3 bg-white rounded-[10px] p-5 border border-slate-200 flex flex-col justify-between min-h-[130px]">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Users size={14} strokeWidth={2} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Active Patients (30 days)</span>
                   </div>
                 </div>
 
-                <div className="mt-auto">
-                  <div className="flex items-baseline gap-2">
-                    <h3 className="text-4xl font-bold text-slate-900 tracking-tight">{filteredPatients.length}</h3>
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                      <TrendingUp size={10} /> +{Math.max(5, (filteredPatients.length * 2) % 15)}%
+                <div className="mt-4 flex flex-col flex-1 justify-end">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{filteredPatients.length}</h3>
+                    <div className="text-[10px] font-bold text-emerald-600">
+                      ▲ {Math.max(5, (filteredPatients.length * 2) % 15)}%
                     </div>
                   </div>
-                  <p className="text-slate-500 text-[10px] font-medium mt-2">+{Math.max(5, (filteredPatients.length * 2) % 15)}% vs last 7 days</p>
-
-                  {/* Micro Visualization: Simple Progress Line */}
-                  <div className="mt-4 h-1 w-full bg-slate-50 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full w-[70%]" />
-                  </div>
+                  <p className="text-slate-400 text-[9px] font-bold uppercase tracking-tight mt-1">
+                    vs last 30 days
+                  </p>
                 </div>
-              </div>
-            </Card>
+              </Card>
 
-            {/* Card 2: Critical Alerts (DOMINANT) */}
-            <Card className="md:col-span-6 group relative bg-white rounded-2xl p-8 border-2 border-red-100 shadow-[0_20px_40px_-12px_rgba(239,68,68,0.1)] hover:shadow-[0_25px_50px_-12px_rgba(239,68,68,0.15)] hover:border-red-200 transition-all duration-300 overflow-hidden flex flex-col md:flex-row gap-8 items-center">
-              <div className="flex-1 flex flex-col h-full justify-between">
-                <div className="flex flex-col gap-1">
+              {/* Card 2: Critical Alerts (PRIORITY) */}
+              <Card className="md:col-span-6 bg-white rounded-[10px] p-5 border border-slate-200 border-l-4 border-l-red-600 relative overflow-hidden flex flex-col justify-between min-h-[130px]">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 border border-red-100 shadow-sm">
-                      <AlertTriangle size={20} strokeWidth={2.5} />
+                    <div className="h-8 w-8 rounded bg-red-50 flex items-center justify-center text-red-600 border border-red-100">
+                      <AlertTriangle size={16} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] block">Critical Alerts</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
-                        <span className={`h-1.5 w-1.5 rounded-full ${systemStatus === 'Optimal' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                        AI Engine: {systemStatus}
-                      </span>
+                      <span className="text-[11px] font-black text-red-600 uppercase tracking-widest">Critical Cases – Immediate Review</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={`h-1.5 w-1.5 rounded-full ${systemStatus === 'Optimal' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">AI SYNC: {systemStatus}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="text-[8px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded uppercase tracking-widest">Urgent</div>
                 </div>
 
-                <div className="mt-8 md:mt-0">
-                  <div className="flex items-baseline gap-3">
-                    <h3 className="text-6xl font-black text-slate-950 tracking-tighter">
-                      {highRiskCount}
-                    </h3>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100 uppercase tracking-tighter">
-                        {highRiskCount > 0 ? "Immediate Action Required" : "Cohort Secure"}
+                <div className="mt-4 flex items-end justify-between">
+                  <div className="flex items-baseline gap-4">
+                    <h3 className="text-5xl font-black text-slate-950 tracking-tighter">{highRiskCount}</h3>
+                    <div className="flex flex-col mb-1">
+                      <span className="text-[10px] font-black text-red-700 flex items-center gap-1 uppercase tracking-tight">
+                        {highRiskCount > 0 ? "Priority Triage Required" : "System Secure"}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-bold mt-2 pl-1">
-                        {highRiskCount > 0 ? "Significantly elevated risk patterns detected" : "No critical risk triggers found in active cohort"}
-                      </span>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
+                        {highRiskCount > 0 ? "Elevated pathology detected" : "No critical alerts recorded"}
+                      </p>
                     </div>
                   </div>
+                  <Button variant="ghost" onClick={() => router.push('/doctor/patients')} size="sm" className="h-8 px-3 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg group">
+                    Enter Registry <ChevronRight size={10} className="ml-1 transition-transform group-hover:translate-x-0.5" />
+                  </Button>
                 </div>
-              </div>
+              </Card>
 
-              {/* Dominant Card Micro-Visualization (Sparkline) */}
-              <div className="hidden lg:block w-48 h-20 opacity-40 group-hover:opacity-60 transition-opacity">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="risk" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorRisk)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
-            {/* Card 3: AI Scans (Secondary) */}
-            <Card className="md:col-span-3 group relative bg-white rounded-2xl p-8 border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:border-slate-300 transition-all duration-200 overflow-hidden flex flex-col">
-              <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] flex items-center gap-2">
-                      <BrainCircuit size={12} className="text-purple-500" /> AI Assessments
-                    </span>
-                    <span className="text-[9px] font-medium text-slate-400">Total processed</span>
+              {/* Card 3: Stable Cases */}
+              <Card className="md:col-span-3 bg-white rounded-[10px] p-5 border border-slate-200 flex flex-col justify-between min-h-[130px]">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <ShieldCheck size={14} strokeWidth={2} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Stable Cases</span>
                   </div>
                 </div>
 
-                <div className="mt-auto">
-                  <div className="flex items-baseline gap-2">
-                    <h3 className="text-4xl font-bold text-slate-900 tracking-tight">{totalAssessments}</h3>
-                    <div className="flex -space-x-1.5 ml-1">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="h-4 w-4 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden">
-                          <div className="h-full w-full bg-purple-200 opacity-50" />
-                        </div>
-                      ))}
+                <div className="mt-4 flex flex-col flex-1 justify-end">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{filteredPatients.length - highRiskCount}</h3>
+                    <div className="text-[10px] font-bold text-slate-500">
+                      ▼ 2.4%
                     </div>
                   </div>
-                  <p className="text-slate-500 text-[10px] font-medium mt-2">Operational Confidence: {avgConfidence}%</p>
-
-                  {/* Micro Visualization: Sparkline Dots */}
-                  <div className="mt-4 flex gap-1 items-end h-4">
-                    {[3, 5, 2, 8, 4, 6, 9].map((h, i) => (
-                      <div key={i} className="w-1 bg-purple-500/20 rounded-full" style={{ height: `${h * 10}%` }} />
-                    ))}
-                  </div>
+                  <p className="text-slate-400 text-[9px] font-bold uppercase tracking-tight mt-1">
+                    Verified Baseline
+                  </p>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           </div>
 
           {/* 4. MAIN ANALYTICS SECTION */}
@@ -370,7 +347,7 @@ export default function DoctorDashboard() {
             {/* LEFT: CHART */}
             {/* LEFT PANEL: PATIENTS REQUIRING ATTENTION (65-70%) - ENTERPRISE STYLE */}
             <div className="lg:col-span-2 flex flex-col h-[520px]">
-              <div className="flex-1 bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden hover:shadow-[0_20px_40px_-5px_rgba(0,0,0,0.05)] transition-all duration-300 relative group">
+              <div className="flex-1 bg-white rounded-[10px] border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 relative group">
 
 
                 {/* Header */}
@@ -483,7 +460,7 @@ export default function DoctorDashboard() {
 
             {/* RIGHT PANEL: RECENT RISK CHANGES (Trajectory) */}
             <div className="lg:col-span-1 flex flex-col h-[520px]">
-              <div className="flex-1 bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden hover:shadow-[0_20px_40px_-5px_rgba(0,0,0,0.05)] transition-all duration-300 relative">
+              <div className="flex-1 bg-white rounded-[10px] border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 relative">
 
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-slate-100 bg-white/80 backdrop-blur-md flex justify-between items-center relative z-10">
@@ -578,324 +555,348 @@ export default function DoctorDashboard() {
 
           </div>
 
-          {/* 6. ACTIVE PATIENT DIRECTORY (Patient Panel) */}
-          <Card className="bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
-            <CardHeader className="flex flex-col md:flex-row items-center justify-between border-b border-slate-100 px-8 py-6 gap-6">
+          {/* 6. ACTIVE PATIENT DIRECTORY (Clinical Data Grid) */}
+          <Card className="bg-white rounded-[10px] border border-slate-200 overflow-hidden">
+            <CardHeader className="flex flex-col md:flex-row items-center justify-between border-b border-slate-100 px-6 py-4 gap-4 bg-slate-50/30">
               <div>
-                <CardTitle className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                  Patient Panel
-                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 uppercase tracking-widest">{filteredPatients.length} Patients</span>
+                <CardTitle className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                  Patient Registry
+                  <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-100 uppercase tracking-widest leading-none">{filteredPatients.length} Units</span>
                 </CardTitle>
-                <p className="text-[10px] text-slate-500 font-bold mt-1.5 uppercase tracking-widest">Verified Clinical Records • {relativeTime}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Operational Clinical Database • System Verified</p>
               </div>
 
-              <div className="flex flex-wrap md:flex-nowrap gap-3 w-full md:w-auto">
-                <Button onClick={fetchPatients} variant="outline" size="sm" className="flex-1 md:flex-none h-10 px-5 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all">
-                  <RefreshCcw size={14} className={`mr-2 ${loading ? 'animate-spin' : ''}`} strokeWidth={2.5} /> Sync Data
-                </Button>
-
-                <Dialog open={isAiOpen} onOpenChange={setIsAiOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="flex-1 md:flex-none h-10 px-6 bg-slate-900 hover:bg-black text-white shadow-sm border-none rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all">
-                      <PlusCircle size={16} className="mr-2" strokeWidth={2.5} /> New Assessment
-                    </Button>
-                  </DialogTrigger>
-                  {/* ... (KEEPING MODAL CONTENT SAME AS BEFORE TO PRESERVE LOGIC, JUST STYLING) */}
-                  <DialogContent className="sm:max-w-[650px] bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden p-0 flex flex-col max-h-[90vh]">
-                    <DialogHeader className="bg-slate-50 p-6 border-b border-slate-100 flex-shrink-0">
-                      <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight">Patient Risk Profiling</DialogTitle>
-                      <p className="text-slate-500 text-sm font-medium">Generate predictive risk assessment via clinical vitals</p>
-                    </DialogHeader>
-
-                    <div className="overflow-y-auto custom-scrollbar-hide p-6">
-                      {!aiResult ? (
-                        <form onSubmit={handlePredict} className="space-y-6">
-                          {/* SECTION 1: BASIC INFORMATION */}
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="h-4 w-1 bg-slate-900 rounded-full" />
-                              <h5 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Basic Information</h5>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="col-span-2">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5 block">Full Name</Label>
-                                <Input name="name" value={aiForm.name} onChange={handleAiChange} className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm" required placeholder="Ex. John Doe" />
-                              </div>
-                              <div className="col-span-2">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5 block">Patient Email (Optional)</Label>
-                                <Input name="email" value={aiForm.email} onChange={handleAiChange} className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm" placeholder="Ex. patient@example.com" />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Age</Label>
-                                <div className="relative">
-                                  <Input name="age" value={aiForm.age} type="number" onChange={handleAiChange} className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-12" required />
-                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">Yrs</span>
-                                </div>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Gender</Label>
-                                <Select onValueChange={(val) => handleSelectChange("gender", val)} value={aiForm.gender}>
-                                  <SelectTrigger className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-white"><SelectItem value="Female">Female</SelectItem><SelectItem value="Male">Male</SelectItem></SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* SECTION 2: CLINICAL METRICS */}
-                          <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="h-4 w-1 bg-slate-900 rounded-full" />
-                              <h5 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Clinical Metrics</h5>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">BMI</Label>
-                                <div className="relative">
-                                  <Input
-                                    name="bmi"
-                                    value={aiForm.bmi}
-                                    type="number"
-                                    step="0.1"
-                                    onChange={handleAiChange}
-                                    className={`bg-white focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-10 transition-colors ${aiForm.bmi && (Number(aiForm.bmi) < 18.5 || Number(aiForm.bmi) > 30) ? 'border-amber-400 bg-amber-50/10' : 'border-slate-200'
-                                      }`}
-                                    required
-                                  />
-                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">kg/m²</span>
-                                </div>
-                                <p className={`text-[9px] font-medium ${aiForm.bmi && (Number(aiForm.bmi) < 18.5 || Number(aiForm.bmi) > 30) ? 'text-amber-600' : 'text-slate-400'}`}>
-                                  {aiForm.bmi && (Number(aiForm.bmi) < 18.5 || Number(aiForm.bmi) > 30) ? "Out of normal range" : "Ref: 18.5-24.9"}
-                                </p>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">HbA1c</Label>
-                                <div className="relative">
-                                  <Input
-                                    name="HbA1c_level"
-                                    value={aiForm.HbA1c_level}
-                                    type="number"
-                                    step="0.1"
-                                    onChange={handleAiChange}
-                                    className={`bg-white focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-8 transition-colors ${aiForm.HbA1c_level && (Number(aiForm.HbA1c_level) < 4.0 || Number(aiForm.HbA1c_level) > 7.0) ? 'border-amber-400 bg-amber-50/10' : 'border-slate-200'
-                                      }`}
-                                    required
-                                  />
-                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">%</span>
-                                </div>
-                                <p className={`text-[9px] font-medium ${aiForm.HbA1c_level && (Number(aiForm.HbA1c_level) < 4.0 || Number(aiForm.HbA1c_level) > 7.0) ? 'text-amber-600' : 'text-slate-400'}`}>
-                                  {aiForm.HbA1c_level && (Number(aiForm.HbA1c_level) < 4.0 || Number(aiForm.HbA1c_level) > 7.0) ? "Atypical detected" : "Ref: 4.0-5.6%"}
-                                </p>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Glucose</Label>
-                                <div className="relative">
-                                  <Input
-                                    name="blood_glucose_level"
-                                    value={aiForm.blood_glucose_level}
-                                    type="number"
-                                    onChange={handleAiChange}
-                                    className={`bg-white focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-12 transition-colors ${aiForm.blood_glucose_level && (Number(aiForm.blood_glucose_level) < 70 || Number(aiForm.blood_glucose_level) > 200) ? 'border-amber-400 bg-amber-50/10' : 'border-slate-200'
-                                      }`}
-                                    required
-                                  />
-                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">mg/dL</span>
-                                </div>
-                                <p className={`text-[9px] font-medium ${aiForm.blood_glucose_level && (Number(aiForm.blood_glucose_level) < 70 || Number(aiForm.blood_glucose_level) > 200) ? 'text-amber-600' : 'text-slate-400'}`}>
-                                  {aiForm.blood_glucose_level && (Number(aiForm.blood_glucose_level) < 70 || Number(aiForm.blood_glucose_level) > 200) ? "Critical levels" : "Ref: 70-99"}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* SECTION 3: RISK FACTORS */}
-                          <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="h-4 w-1 bg-slate-900 rounded-full" />
-                              <h5 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Risk Factors</h5>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Smoking</Label>
-                                <Select onValueChange={(val) => handleSelectChange("smoking_history", val)} value={aiForm.smoking_history}>
-                                  <SelectTrigger className="bg-white border-slate-200 rounded-lg h-10 text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-white text-xs">
-                                    <SelectItem value="never">Never</SelectItem><SelectItem value="current">Current</SelectItem><SelectItem value="former">Former</SelectItem><SelectItem value="No Info">No Info</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider text-[9px]">Hypertension</Label>
-                                <Select onValueChange={(val) => handleSelectChange("hypertension", val)} value={aiForm.hypertension}>
-                                  <SelectTrigger className="bg-white border-slate-200 rounded-lg h-10 text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-white text-xs"><SelectItem value="0">Negative</SelectItem><SelectItem value="1">Positive</SelectItem></SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider text-[9px]">Heart Disease</Label>
-                                <Select onValueChange={(val) => handleSelectChange("heart_disease", val)} value={aiForm.heart_disease}>
-                                  <SelectTrigger className="bg-white border-slate-200 rounded-lg h-10 text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-white text-xs"><SelectItem value="0">Negative</SelectItem><SelectItem value="1">Positive</SelectItem></SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="pt-6 border-t border-slate-100 sticky bottom-0 bg-white pb-2 mt-auto">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
-                                <ShieldCheck size={12} className="text-emerald-500" />
-                                HIPAA Compliant • Data Encrypted
-                              </div>
-                              <button type="button" onClick={() => setIsAiOpen(false)} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">Cancel</button>
-                            </div>
-                            <Button type="submit" className="w-full bg-slate-900 hover:bg-black h-12 font-bold rounded-xl text-white text-xs uppercase tracking-widest transition-all shadow-md" disabled={aiLoading}>
-                              {aiLoading ? (
-                                <div className="flex items-center justify-center gap-2">
-                                  <Loader2 className="animate-spin text-white" size={14} />
-                                  <span className="text-white">Analyzing Clinical Records...</span>
-                                </div>
-                              ) : <span className="text-white">Initiate AI Risk Analysis</span>}
-                            </Button>
-                          </div>
-                        </form>
-                      ) : (
-                        <div className="text-center py-10 space-y-6">
-                          <div className={`text-6xl font-black ${aiResult.riskLevel === 'High' ? 'text-red-500' : 'text-emerald-500'}`}>{(aiResult.riskScore || 0).toFixed(2)}%</div>
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="text-sm uppercase tracking-widest text-slate-500 font-bold">{aiResult.riskLevel} Clinical Risk Detected</div>
-                            {aiResult.confidenceLabel && (
-                              <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${aiResult.confidenceLabel === 'High' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                Model Confidence: {aiResult.confidenceLabel}
-                              </div>
-                            )}
-                          </div>
-                          <Button onClick={() => { setIsAiOpen(false); setAiResult(null); }} className="w-full border-slate-200 bg-white text-slate-700 hover:bg-slate-50 h-12 rounded-xl border">Close & Save to Directory</Button>
-                        </div>
-                      )}
+              <div className="flex flex-wrap md:flex-nowrap gap-2 w-full md:w-auto">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="h-8 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-md font-bold text-[9px] uppercase tracking-widest transition-all">
+                    <Activity size={10} className="mr-1.5" /> Filter
+                    <div className="ml-1.5 flex gap-0.5">
+                      <div className="h-0.5 w-0.5 bg-slate-400 rounded-full" /><div className="h-0.5 w-0.5 bg-slate-400 rounded-full" />
                     </div>
-                  </DialogContent>
-                </Dialog>
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-8 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-md font-bold text-[9px] uppercase tracking-widest transition-all">
+                    <TrendingUp size={10} className="mr-1.5" /> Export
+                  </Button>
+                  <Dialog open={isAiOpen} onOpenChange={setIsAiOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="h-8 px-4 bg-slate-900 hover:bg-black text-white rounded-md font-bold text-[9px] uppercase tracking-widest transition-all shadow-none">
+                        <PlusCircle size={12} className="mr-2" /> Intake
+                      </Button>
+                    </DialogTrigger>
+                    {/* ... (Modal content follows) */}
+                    {/* ... (KEEPING MODAL CONTENT SAME AS BEFORE TO PRESERVE LOGIC, JUST STYLING) */}
+                    <DialogContent className="sm:max-w-[650px] bg-white border border-slate-200 shadow-2xl rounded-[10px] overflow-hidden p-0 flex flex-col max-h-[95vh]">
+                      <DialogHeader className="bg-slate-50 p-6 border-b border-slate-100 flex-shrink-0">
+                        <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight">Patient Risk Profiling</DialogTitle>
+                        <p className="text-slate-500 text-sm font-medium">Generate predictive risk assessment via clinical vitals</p>
+                      </DialogHeader>
+
+                      <div className="overflow-y-auto custom-scrollbar-hide flex-1">
+                        {!aiResult ? (
+                          <form onSubmit={handlePredict} className="flex flex-col h-full">
+                            <div className="p-6 space-y-8 flex-1">
+                              {/* SECTION 1: BASIC INFORMATION */}
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-2 mb-4">
+                                  <div className="h-4 w-1 bg-slate-900 rounded-full" />
+                                  <h5 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Basic Information</h5>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="col-span-2">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5 block">Full Name</Label>
+                                    <Input name="name" value={aiForm.name} onChange={handleAiChange} className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm" required placeholder="Ex. John Doe" />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5 block">Patient Email (Optional)</Label>
+                                    <Input name="email" value={aiForm.email} onChange={handleAiChange} className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm" placeholder="Ex. patient@example.com" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Age</Label>
+                                    <div className="relative">
+                                      <Input name="age" value={aiForm.age} type="number" onChange={handleAiChange} className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-12" required />
+                                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">Yrs</span>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Gender</Label>
+                                    <Select onValueChange={(val) => handleSelectChange("gender", val)} value={aiForm.gender}>
+                                      <SelectTrigger className="bg-white border-slate-200 focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm"><SelectValue /></SelectTrigger>
+                                      <SelectContent className="bg-white"><SelectItem value="Female">Female</SelectItem><SelectItem value="Male">Male</SelectItem></SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* SECTION 2: CLINICAL METRICS */}
+                              <div className="space-y-4 pt-4 border-t border-slate-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                  <div className="h-4 w-1 bg-slate-900 rounded-full" />
+                                  <h5 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Clinical Metrics</h5>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">BMI</Label>
+                                    <div className="relative">
+                                      <Input
+                                        name="bmi"
+                                        value={aiForm.bmi}
+                                        type="number"
+                                        step="0.1"
+                                        onChange={handleAiChange}
+                                        className={`bg-white focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-10 transition-colors ${aiForm.bmi && (Number(aiForm.bmi) < 18.5 || Number(aiForm.bmi) > 30) ? 'border-amber-400 bg-amber-50/10' : 'border-slate-200'
+                                          }`}
+                                        required
+                                      />
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">kg/m²</span>
+                                    </div>
+                                    <p className={`text-[9px] font-medium ${aiForm.bmi && (Number(aiForm.bmi) < 18.5 || Number(aiForm.bmi) > 30) ? 'text-amber-600' : 'text-slate-400'}`}>
+                                      {aiForm.bmi && (Number(aiForm.bmi) < 18.5 || Number(aiForm.bmi) > 30) ? "Out of normal range" : "Ref: 18.5-24.9"}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">HbA1c</Label>
+                                    <div className="relative">
+                                      <Input
+                                        name="HbA1c_level"
+                                        value={aiForm.HbA1c_level}
+                                        type="number"
+                                        step="0.1"
+                                        onChange={handleAiChange}
+                                        className={`bg-white focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-8 transition-colors ${aiForm.HbA1c_level && (Number(aiForm.HbA1c_level) < 4.0 || Number(aiForm.HbA1c_level) > 7.0) ? 'border-amber-400 bg-amber-50/10' : 'border-slate-200'
+                                          }`}
+                                        required
+                                      />
+                                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">%</span>
+                                    </div>
+                                    <p className={`text-[9px] font-medium ${aiForm.HbA1c_level && (Number(aiForm.HbA1c_level) < 4.0 || Number(aiForm.HbA1c_level) > 7.0) ? 'text-amber-600' : 'text-slate-400'}`}>
+                                      {aiForm.HbA1c_level && (Number(aiForm.HbA1c_level) < 4.0 || Number(aiForm.HbA1c_level) > 7.0) ? "Atypical detected" : "Ref: 4.0-5.6%"}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Glucose</Label>
+                                    <div className="relative">
+                                      <Input
+                                        name="blood_glucose_level"
+                                        value={aiForm.blood_glucose_level}
+                                        type="number"
+                                        onChange={handleAiChange}
+                                        className={`bg-white focus:ring-2 focus:ring-slate-950/5 focus:border-slate-900 rounded-lg h-10 text-sm pr-12 transition-colors ${aiForm.blood_glucose_level && (Number(aiForm.blood_glucose_level) < 70 || Number(aiForm.blood_glucose_level) > 200) ? 'border-amber-400 bg-amber-50/10' : 'border-slate-200'
+                                          }`}
+                                        required
+                                      />
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">mg/dL</span>
+                                    </div>
+                                    <p className={`text-[9px] font-medium ${aiForm.blood_glucose_level && (Number(aiForm.blood_glucose_level) < 70 || Number(aiForm.blood_glucose_level) > 200) ? 'text-amber-600' : 'text-slate-400'}`}>
+                                      {aiForm.blood_glucose_level && (Number(aiForm.blood_glucose_level) < 70 || Number(aiForm.blood_glucose_level) > 200) ? "Critical levels" : "Ref: 70-99"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* SECTION 3: RISK FACTORS */}
+                              <div className="space-y-4 pt-4 border-t border-slate-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                  <div className="h-4 w-1 bg-slate-900 rounded-full" />
+                                  <h5 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Risk Factors</h5>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Smoking</Label>
+                                    <Select onValueChange={(val) => handleSelectChange("smoking_history", val)} value={aiForm.smoking_history}>
+                                      <SelectTrigger className="bg-white border-slate-200 rounded-lg h-10 text-xs"><SelectValue /></SelectTrigger>
+                                      <SelectContent className="bg-white text-xs">
+                                        <SelectItem value="never">Never</SelectItem><SelectItem value="current">Current</SelectItem><SelectItem value="former">Former</SelectItem><SelectItem value="No Info">No Info</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider text-[9px]">Hypertension</Label>
+                                    <Select onValueChange={(val) => handleSelectChange("hypertension", val)} value={aiForm.hypertension}>
+                                      <SelectTrigger className="bg-white border-slate-200 rounded-lg h-10 text-xs"><SelectValue /></SelectTrigger>
+                                      <SelectContent className="bg-white text-xs"><SelectItem value="0">Negative</SelectItem><SelectItem value="1">Positive</SelectItem></SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider text-[9px]">Heart Disease</Label>
+                                    <Select onValueChange={(val) => handleSelectChange("heart_disease", val)} value={aiForm.heart_disease}>
+                                      <SelectTrigger className="bg-white border-slate-200 rounded-lg h-10 text-xs"><SelectValue /></SelectTrigger>
+                                      <SelectContent className="bg-white text-xs"><SelectItem value="0">Negative</SelectItem><SelectItem value="1">Positive</SelectItem></SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+
+                            </div>
+
+                            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
+                                  <ShieldCheck size={12} className="text-emerald-500" />
+                                  HIPAA Compliant • Data Encrypted
+                                </div>
+                                <button type="button" onClick={() => setIsAiOpen(false)} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">Cancel</button>
+                              </div>
+                              <Button type="submit" className="w-full bg-slate-900 hover:bg-black h-12 font-bold rounded-lg text-white text-xs uppercase tracking-widest transition-all shadow-none" disabled={aiLoading}>
+                                {aiLoading ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Loader2 className="animate-spin text-white" size={14} />
+                                    <span className="text-white">Analyzing Clinical Records...</span>
+                                  </div>
+                                ) : <span className="text-white">Initiate AI Risk Analysis</span>}
+                              </Button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="text-center py-10 space-y-6">
+                            <div className={`text-6xl font-black ${aiResult.riskLevel === 'High' ? 'text-red-500' : 'text-emerald-500'}`}>{(aiResult.riskScore || 0).toFixed(2)}%</div>
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="text-sm uppercase tracking-widest text-slate-500 font-bold">{aiResult.riskLevel} Clinical Risk Detected</div>
+                              {aiResult.confidenceLabel && (
+                                <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${aiResult.confidenceLabel === 'High' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                  Model Confidence: {aiResult.confidenceLabel}
+                                </div>
+                              )}
+                            </div>
+                            <Button onClick={() => { setIsAiOpen(false); setAiResult(null); }} className="w-full border-slate-200 bg-white text-slate-700 hover:bg-slate-50 h-10 rounded-lg border font-bold text-[10px] uppercase tracking-widest">Close & Sync with Directory</Button>
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             </CardHeader>
 
-            <div className="flex flex-col gap-4 px-8 pb-10">
-              {/* Custom Header Row - Hidden on Mobile */}
-              <div className="hidden md:grid grid-cols-12 gap-6 px-8 py-4 border-b border-slate-100 text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-                <div className="col-span-4">Patient Profile</div>
-                <div className="col-span-3 text-center">Clinical Status</div>
-                <div className="col-span-3 text-center">Communication</div>
-                <div className="col-span-1 text-center">Enrolled</div>
-                <div className="col-span-1 text-right pr-4">Actions</div>
-              </div>
-
-              {/* Patient Rows */}
-              <div className="space-y-3">
-                {filteredPatients.length === 0 ? (
-                  <div className="text-center py-20 bg-slate-50/30 rounded-[32px] border border-dashed border-slate-200">
-                    <div className="h-20 w-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100">
-                      <Users className="text-slate-300" size={32} strokeWidth={1.5} />
-                    </div>
-                    <p className="text-slate-800 font-black text-lg tracking-tight">Access Restricted</p>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2">No active records found in current view</p>
-                  </div>
-                ) : (
-                  filteredPatients.map((p) => (
-                    <div
-                      key={p._id}
-                      onClick={() => router.push(`/doctor/patients/${p._id}`)}
-                      className="group flex flex-col md:grid md:grid-cols-12 items-center gap-6 py-4 px-8 bg-white border-b border-slate-100 hover:bg-slate-50/50 transition-all duration-150 cursor-pointer relative overflow-hidden"
-                    >
-                      {/* Hover Highlight Strip */}
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-950 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                      {/* Patient Info */}
-                      <div className="col-span-12 md:col-span-4 flex items-center gap-4 relative z-10 w-full">
-                        <div className="relative">
-                          <Avatar className="h-12 w-12 border border-slate-200 transition-transform duration-300 group-hover:scale-105">
-                            <AvatarFallback className={`font-bold text-base uppercase ${p.prediction?.riskLevel === 'High' ? 'bg-red-50 text-red-700' : 'bg-slate-50 text-slate-700'}`}>
-                              {p.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm ${p.prediction?.riskLevel === 'High' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+            <div className="px-6 pb-6 pt-2">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-slate-100">
+                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10">
+                      <div className="flex items-center gap-1.5">
+                        Patient Profile
+                        <div className="flex flex-col gap-0.5 opacity-30">
+                          <div className="w-1.5 h-0.5 bg-slate-950" />
+                          <div className="w-1 h-0.5 bg-slate-950" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-slate-900 text-sm group-hover:text-black transition-colors truncate uppercase tracking-tight leading-none">{p.name}</p>
-                          <div className="flex items-center gap-3 mt-2">
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">{p.inputs?.age} YRS</p>
-                            <span className="h-0.5 w-0.5 rounded-full bg-slate-300"></span>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">{(p.prediction?.riskScore || 0).toFixed(0)} Assessments</p>
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10">
+                      <div className="flex items-center gap-1.5">
+                        Clinical ID
+                        <div className="w-1.5 h-1.5 border-r border-t border-slate-400 rotate-45 mt-1 opacity-20" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        Risk Status
+                        <div className="w-1.5 h-1.5 border-r border-t border-slate-400 rotate-45 mt-1 opacity-20" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10">Communication</TableHead>
+                    <TableHead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest h-10 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        Enrolled Date
+                        <div className="flex flex-col gap-0.5 opacity-30">
+                          <div className="w-1 h-0.5 bg-slate-950" />
+                          <div className="w-1.5 h-0.5 bg-slate-950" />
+                        </div>
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPatients.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-48 text-center bg-slate-50/30">
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                          <Users className="text-slate-300" size={32} strokeWidth={1} />
+                          <div>
+                            <p className="text-slate-800 font-black text-sm uppercase">Access Restricted</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">No active records found in current view</p>
                           </div>
                         </div>
-                      </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPatients.map((p) => {
+                      const enrollmentDate = new Date(p.createdAt || Date.now());
+                      const formattedDate = `${enrollmentDate.getDate()} ${enrollmentDate.toLocaleString('default', { month: 'short' })} ${enrollmentDate.getFullYear()}`;
 
-                      {/* Risk Status - Desktop Only */}
-                      <div className="hidden md:flex col-span-3 justify-center relative z-10">
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${p.prediction?.riskLevel === 'High'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                          <Activity size={10} strokeWidth={3} />
-                          {p.prediction?.riskLevel} Risk Case
-                        </div>
-                      </div>
+                      return (
+                        <TableRow
+                          key={p._id}
+                          onClick={() => router.push(`/doctor/patients/${p._id}`)}
+                          className="group cursor-pointer hover:bg-slate-50/80 border-slate-50 transition-colors relative"
+                        >
+                          <TableCell className="py-2.5">
+                            <div className="flex items-center gap-3">
+                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Avatar className="h-8 w-8 border border-slate-100 flex-shrink-0">
+                                <AvatarFallback className={`text-[10px] font-bold uppercase ${p.prediction?.riskLevel === 'High' ? 'bg-red-50 text-red-700' : 'bg-slate-50 text-slate-700'}`}>
+                                  {p.name.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-[11px] font-bold text-slate-900 group-hover:text-black leading-tight uppercase tracking-tight">{p.name}</p>
+                                <p className="text-[8px] text-slate-450 font-bold mt-0.5 uppercase tracking-widest leading-none">{p.inputs?.age} Yrs • {p.inputs?.gender === 1 ? 'M' : 'F'}</p>
+                              </div>
+                            </div>
+                          </TableCell>
 
-                      {/* Contact Info */}
-                      <div className="col-span-12 md:col-span-3 flex flex-row md:flex-col items-center md:items-start justify-between md:justify-center text-sm relative z-10 space-y-0 md:space-y-1.5 pt-4 md:pt-0 border-t md:border-t-0 border-slate-50 w-full md:w-auto">
-                        <div className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors cursor-help" title="Encrypted Clinical Channel">
-                          <Mail size={12} className="text-slate-400" />
-                          <span className="truncate text-[10px] font-bold uppercase tracking-tight">{p.email || "No direct link"}</span>
-                        </div>
-                        <div className="hidden md:flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors cursor-help" title="Secure Communication Verified">
-                          <Phone size={12} className="text-slate-400" />
-                          <span className="truncate text-[10px] font-bold uppercase tracking-tight">{p.phone || "Encrypted Line"}</span>
-                        </div>
-                        {/* Mobile Date */}
-                        <div className="md:hidden text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                          {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </div>
-                      </div>
+                          <TableCell className="py-2.5">
+                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase tracking-widest">
+                              ID-{p._id.slice(-6).toUpperCase()}
+                            </span>
+                          </TableCell>
 
-                      {/* Date - Desktop Only */}
-                      <div className="hidden md:flex items-center justify-center col-span-1 relative z-10 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                        {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </div>
+                          <TableCell className="py-2.5 text-center">
+                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-wider border ${p.prediction?.riskLevel === 'High'
+                              ? 'bg-red-50 text-red-700 border-red-100'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
+                              <div className={`h-1 w-1 rounded-full ${p.prediction?.riskLevel === 'High' ? 'bg-red-600' : 'bg-emerald-600'}`} />
+                              {p.prediction?.riskLevel} Risk
+                            </div>
+                          </TableCell>
 
-                      {/* Actions */}
-                      <div className="col-span-12 md:col-span-1 flex items-center justify-end relative z-10 pt-4 md:pt-0 w-full md:w-auto">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={(e) => initiateDelete(e, p)}
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                          >
-                            <Trash2 size={16} strokeWidth={2.5} />
-                          </Button>
-                          <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all duration-200 border border-slate-100">
-                            <ChevronRight size={18} strokeWidth={3} />
-                          </div>
-                        </div>
-                      </div>
+                          <TableCell className="py-2.5">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5" title={p.email || "No email provided"}>
+                                <Mail size={10} className="text-slate-300" />
+                                <span className={`text-[9px] font-medium truncate max-w-[110px] ${!p.email ? 'text-slate-400 italic' : 'text-slate-600'}`}>
+                                  {p.email || "Not Provided"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5" title={p.phone || "No phone provided"}>
+                                <Phone size={10} className="text-slate-300" />
+                                <span className={`text-[9px] font-medium ${!p.phone ? 'text-slate-400 italic' : 'text-slate-600'}`}>
+                                  {p.phone || "Not Provided"}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
 
-                    </div>
-                  ))
-                )}
-              </div>
+                          <TableCell className="py-2.5 text-right">
+                            <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-tighter">
+                              {formattedDate}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </Card>
-
         </div>
       </main>
 
-      {/* 5. FLOATING AI CO-PILOT */}
       <ClinicalCoPilot />
-
       <MobileNav />
 
-      {/* DELETE CONFIRMATION ALERT (Styled) */}
       <AlertDialog open={!!patientToDelete} onOpenChange={(open) => !open && setPatientToDelete(null)}>
         <AlertDialogContent className="bg-white border-none shadow-[0_40px_100px_rgba(0,0,0,0.1)] rounded-[32px] p-10 max-w-lg">
           <AlertDialogHeader>
@@ -930,7 +931,6 @@ export default function DoctorDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }

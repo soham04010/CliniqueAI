@@ -158,88 +158,94 @@ export default function ReportsPage() {
                     setSearchQuery={() => { }}
                 />
 
-                <div className="flex-1 p-6 lg:p-10 overflow-y-auto space-y-10">
+                <div className="flex-1 p-6 lg:p-8 overflow-y-auto space-y-8">
 
                     {/* SECTION 1: OUTCOME SUMMARY */}
                     <section>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="h-8 w-1 bg-blue-600 rounded-full"></div>
-                            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Patient Outcome Summary <span className="text-slate-400 font-normal text-sm ml-2">Last 30 Days</span></h2>
+                        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 px-1">
+                            <div className="flex items-center gap-3">
+                                <div className="h-4 w-1 bg-slate-900 rounded-full"></div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">Patient Outcome Summary</h2>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Institutional Performance Metrics • Verified Analysis</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-200/60">
+                                <Clock size={12} className="text-slate-400" />
+                                Reporting Window: Last 30 Days • Sync: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                             {/* Improved */}
-                            <div className="group bg-white rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_32px_rgba(16,185,129,0.1)] transition-all duration-300 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
-                                    <TrendingDown size={100} className="text-emerald-900" />
-                                </div>
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="h-8 w-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                                        <TrendingDown size={16} strokeWidth={3} />
+                            <div className="bg-white rounded-[10px] p-5 border border-slate-200 transition-all duration-200 relative overflow-hidden">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="h-6 w-6 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
+                                        <TrendingDown size={14} strokeWidth={2.5} />
                                     </div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Improved</p>
+                                    <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Reduced Risk Cases</p>
                                 </div>
-                                <div className="mt-4">
-                                    <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{activityMetrics.improved}</h3>
-                                    <p className="text-xs font-medium text-emerald-600 flex items-center gap-1">
-                                        Patients reduced risk
-                                    </p>
+                                <div className="mt-4 flex flex-col">
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-1">{activityMetrics.improved}</h3>
+                                    <div className="flex items-center gap-1.5 mt-auto">
+                                        <div className="h-1 w-1 rounded-full bg-emerald-500" />
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Clinical Recovery Path</p>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Worsened */}
-                            <div className="group bg-white rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_32px_rgba(239,68,68,0.1)] transition-all duration-300 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
-                                    <TrendingUp size={100} className="text-red-900" />
-                                </div>
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="h-8 w-8 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
-                                        <TrendingUp size={16} strokeWidth={3} />
+                            <div className="bg-white rounded-[10px] p-5 border border-slate-200 transition-all duration-200 relative overflow-hidden">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="h-6 w-6 rounded-md bg-red-50 flex items-center justify-center text-red-600 border border-red-100">
+                                        <TrendingUp size={14} strokeWidth={2.5} />
                                     </div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Escalated</p>
+                                    <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Escalated Cases</p>
                                 </div>
-                                <div className="mt-4">
-                                    <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{activityMetrics.worsened}</h3>
-                                    <p className="text-xs font-medium text-red-600 flex items-center gap-1">
-                                        Risk increased
-                                    </p>
+                                <div className="mt-4 flex flex-col">
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-1">{activityMetrics.worsened}</h3>
+                                    <div className="flex items-center gap-1.5 mt-auto">
+                                        <div className="h-1 w-1 rounded-full bg-red-500" />
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Immediate Monitoring Required</p>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Stable */}
-                            <div className="group bg-white rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_32px_rgba(0,0,0,0.05)] transition-all duration-300 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
-                                    <Minus size={100} className="text-slate-900" />
-                                </div>
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="h-8 w-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                                        <Minus size={16} strokeWidth={3} />
+                            <div className="bg-white rounded-[10px] p-5 border border-slate-200 transition-all duration-200 relative overflow-hidden">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="h-6 w-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-600 border border-slate-200">
+                                        <Minus size={14} strokeWidth={2.5} />
                                     </div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Stable</p>
+                                    <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Maintained Baseline</p>
                                 </div>
-                                <div className="mt-4">
-                                    <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{activityMetrics.stable}</h3>
-                                    <p className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                                        Maintained baseline
-                                    </p>
+                                <div className="mt-4 flex flex-col">
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-1">{activityMetrics.stable}</h3>
+                                    <div className="flex items-center gap-1.5 mt-auto">
+                                        <div className="h-1 w-1 rounded-full bg-slate-400" />
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Verified Stable Cohort</p>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Net Improvement */}
-                            <div className="relative bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 rounded-[24px] p-6 shadow-[0_12px_24px_rgba(37,99,235,0.25)] text-white overflow-hidden group">
-                                <div className="absolute -right-6 -top-6 h-32 w-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
-                                    <Activity size={120} />
+                            <div className="bg-white rounded-[10px] p-5 border-2 border-slate-950 flex flex-col justify-between relative overflow-hidden group">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Net Clinical Effect</p>
+                                        <Activity size={12} className="text-slate-400" />
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <h3 className="text-4xl font-black text-slate-950 tracking-tighter">
+                                            {activityMetrics.netImprovement > 0 ? "+" : ""}{activityMetrics.netImprovement.toFixed(1)}%
+                                        </h3>
+                                    </div>
                                 </div>
-
-                                <p className="text-xs font-bold text-blue-100 uppercase tracking-widest mb-4 opacity-80">Net Clinical Effect</p>
-                                <div className="flex items-end gap-2 mb-2">
-                                    <h3 className="text-5xl font-black tracking-tighter">
-                                        {activityMetrics.netImprovement > 0 ? "+" : ""}{activityMetrics.netImprovement.toFixed(1)}%
-                                    </h3>
-                                </div>
-                                <div className="inline-flex items-center bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white border border-white/10">
-                                    (Improved - Worsened) / Total
+                                <div className="mt-4">
+                                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter mb-1.5">Statistical Impact Formula</div>
+                                    <div className="inline-flex items-center bg-slate-50 px-2 py-0.5 rounded text-[9px] font-bold text-slate-600 border border-slate-100">
+                                        (Improved - Worsened) / Total Patients
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -249,33 +255,54 @@ export default function ReportsPage() {
 
                         {/* SECTION 2: ESCALATION TRACKER (60%) */}
                         <section className="lg:col-span-3 flex flex-col">
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center justify-between mb-6 px-1">
                                 <div className="flex items-center gap-3">
-                                    <div className="h-8 w-1 bg-amber-500 rounded-full"></div>
-                                    <h2 className="text-xl font-bold text-slate-800 tracking-tight">Escalation Tracker</h2>
+                                    <div className="h-4 w-1 bg-amber-500 rounded-full"></div>
+                                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">Escalation Tracker</h2>
                                 </div>
-                                <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                                    {escalations.length} Detected
-                                </Badge>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-200/60 flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-amber-500"></div>
+                                    {escalations.length} Detected Incidents
+                                </div>
                             </div>
 
-                            <div className="bg-white rounded-[24px] border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden">
+                            <div className="bg-white rounded-[10px] border border-slate-200 overflow-hidden">
+                                {/* Summary Grid - New Clinical Structure */}
+                                <div className="grid grid-cols-4 divide-x divide-slate-100 bg-slate-50/50 border-b border-slate-200">
+                                    <div className="p-4 text-center">
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Signals</div>
+                                        <div className="text-xl font-black text-slate-900">{escalations.length}</div>
+                                    </div>
+                                    <div className="p-4 text-center">
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">High Severity</div>
+                                        <div className="text-xl font-black text-red-600">{escalations.filter(p => p.riskChange > 15).length}</div>
+                                    </div>
+                                    <div className="p-4 text-center">
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Moderate</div>
+                                        <div className="text-xl font-black text-amber-600">{escalations.filter(p => p.riskChange > 5 && p.riskChange <= 15).length}</div>
+                                    </div>
+                                    <div className="p-4 text-center">
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Resolved</div>
+                                        <div className="text-xl font-black text-emerald-600">0</div>
+                                    </div>
+                                </div>
+
                                 {escalations.length === 0 ? (
                                     <div className="p-16 flex flex-col items-center justify-center text-center">
-                                        <div className="h-16 w-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 text-emerald-500">
-                                            <CheckCircle2 size={32} />
+                                        <div className="h-12 w-12 bg-emerald-50 rounded-lg flex items-center justify-center mb-4 text-emerald-500 border border-emerald-100">
+                                            <CheckCircle2 size={24} />
                                         </div>
-                                        <h3 className="text-slate-800 font-bold mb-1">Clean Record</h3>
-                                        <p className="text-slate-400 text-sm">No significant escalations detected this period.</p>
+                                        <h3 className="text-slate-900 font-bold mb-1 text-sm uppercase tracking-tight">Clean Record</h3>
+                                        <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">No significant clinical escalations detected.</p>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="grid grid-cols-12 gap-4 p-5 bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider backdrop-blur-sm sticky top-0 z-10">
-                                            <div className="col-span-5 pl-2">Patient</div>
-                                            <div className="col-span-3">Risk Shift</div>
+                                        <div className="grid grid-cols-12 gap-4 p-5 bg-slate-50/30 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                            <div className="col-span-5 pl-2">Clinical Identifier</div>
+                                            <div className="col-span-3">Risk Variance</div>
                                             <div className="col-span-4">Primary Driver</div>
                                         </div>
-                                        <div className="divide-y divide-slate-50">
+                                        <div className="divide-y divide-slate-100">
                                             {escalations.slice(0, 5).map(p => (
                                                 <div
                                                     key={p._id}
@@ -285,44 +312,46 @@ export default function ReportsPage() {
                                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                                                     <div className="col-span-5 flex items-center gap-4 pl-2">
-                                                        <Avatar className="h-10 w-10 border border-slate-100 bg-white shadow-sm group-hover:scale-105 transition-transform">
-                                                            <AvatarFallback className="bg-slate-50 text-slate-600 font-bold text-xs">{p.name.charAt(0)}</AvatarFallback>
+                                                        <Avatar className="h-8 w-8 border border-slate-200 rounded-md">
+                                                            <AvatarFallback className="bg-slate-50 text-slate-600 font-bold text-[10px] uppercase">{p.name.charAt(0)}</AvatarFallback>
                                                         </Avatar>
                                                         <div>
-                                                            <p className="font-bold text-slate-800 text-sm group-hover:text-blue-700 transition-colors">{p.name}</p>
-                                                            <p className="text-[11px] text-slate-400 font-mono tracking-wide">ID: {p._id.slice(-6).toUpperCase()}</p>
+                                                            <p className="font-bold text-slate-900 text-xs uppercase tracking-tight transition-colors">{p.name}</p>
+                                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">ID: {p._id.slice(-6).toUpperCase()}</p>
                                                         </div>
                                                     </div>
 
                                                     <div className="col-span-3">
-                                                        <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-100 text-xs font-bold shadow-sm group-hover:shadow-md transition-shadow">
-                                                            <TrendingUp size={12} className="mr-1.5" />
+                                                        <div className="inline-flex items-center px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-100 text-[10px] font-black uppercase tracking-tight">
+                                                            <TrendingUp size={10} className="mr-1" strokeWidth={3} />
                                                             +{p.riskChange.toFixed(1)}%
                                                         </div>
                                                     </div>
 
                                                     <div className="col-span-4 pr-2">
                                                         {p.escalationType === 'threshold' && (
-                                                            <span className="inline-flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100/50">
-                                                                <AlertCircle size={12} className="mr-1.5" /> HbA1c {'>'} 6.5
-                                                            </span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className="h-1 w-1 rounded-full bg-amber-500" />
+                                                                <span className="text-[9px] font-bold text-amber-700 uppercase tracking-widest">Pathological Threshold (HbA1c)</span>
+                                                            </div>
                                                         )}
                                                         {p.escalationType === 'significant' && (
-                                                            <span className="inline-flex items-center text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-md border border-red-100/50">
-                                                                <Activity size={12} className="mr-1.5" /> Rapid Shift
-                                                            </span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className="h-1 w-1 rounded-full bg-red-600" />
+                                                                <span className="text-[9px] font-bold text-red-700 uppercase tracking-widest">Rapid Signal Escalation</span>
+                                                            </div>
                                                         )}
                                                         {!p.escalationType && (
-                                                            <span className="text-xs font-medium text-slate-400 italic">Routine Variation</span>
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Standard Variance</span>
                                                         )}
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                         {escalations.length > 5 && (
-                                            <div className="p-3 text-center border-t border-slate-100">
-                                                <button className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">
-                                                    View All Escalations
+                                            <div className="p-3 text-center border-t border-slate-100 bg-slate-50/20">
+                                                <button className="text-[10px] font-bold text-slate-900 hover:text-black uppercase tracking-widest transition-colors flex items-center justify-center w-full gap-2">
+                                                    Expand Incident Logs <ArrowRight size={10} />
                                                 </button>
                                             </div>
                                         )}
@@ -333,43 +362,42 @@ export default function ReportsPage() {
 
                         {/* SECTION 3: MONITORING GAPS (40%) */}
                         <section className="lg:col-span-2 flex flex-col">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="h-8 w-1 bg-slate-300 rounded-full"></div>
-                                <h2 className="text-xl font-bold text-slate-800 tracking-tight">Monitoring Gaps</h2>
+                            <div className="flex items-center gap-3 mb-6 px-1">
+                                <div className="h-4 w-1 bg-slate-300 rounded-full"></div>
+                                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Monitoring Gaps</h2>
                             </div>
 
-                            <div className="flex flex-col gap-6">
+                            <div className="flex flex-col gap-5">
                                 {/* 180 Days */}
-                                <div className="bg-white rounded-[24px] border border-red-100 shadow-[0_4px_20px_rgba(254,242,242,0.5)] overflow-hidden relative">
-                                    <div className="absolute top-0 right-0 p-4 opacity-[0.05] pointer-events-none">
-                                        <AlertCircle size={80} className="text-red-900" />
+                                <div className="bg-white rounded-[10px] border border-slate-200 overflow-hidden relative">
+                                    <div className="flex items-center justify-between p-4 bg-slate-50/50 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></div>
+                                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Critical: Overdue {'>'} 180 Days</span>
+                                        </div>
+                                        <div className="text-xs font-black text-red-600 underline decoration-red-200 underline-offset-4">{monitoringGaps.over180.length}</div>
                                     </div>
 
-                                    <div className="p-5 pb-2 flex items-center justify-between">
-                                        <span className="text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-2">
-                                            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-                                            Overdue {'>'} 180 Days
-                                        </span>
-                                        <Badge className="bg-red-50 text-red-700 border-red-100 hover:bg-red-100">{monitoringGaps.over180.length}</Badge>
-                                    </div>
-
-                                    <div className="p-2 space-y-1">
+                                    <div className="divide-y divide-slate-50">
                                         {monitoringGaps.over180.length === 0 ? (
-                                            <div className="p-6 text-center">
-                                                <p className="text-xs text-slate-400 font-medium">No critical gaps.</p>
+                                            <div className="p-8 text-center bg-white">
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">System Health Optimal:<br />No Clinical Gaps Detected</p>
                                             </div>
                                         ) : (
-                                            monitoringGaps.over180.slice(0, 3).map(p => (
-                                                <div key={p._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-red-50/60 transition-colors cursor-pointer group" onClick={() => router.push(`/doctor/patients/${p._id}`)}>
+                                            monitoringGaps.over180.slice(0, 5).map(p => (
+                                                <div key={p._id} className="flex items-center justify-between p-3.5 hover:bg-slate-50/80 transition-all cursor-pointer group border-l-4 border-l-red-600" onClick={() => router.push(`/doctor/patients/${p._id}`)}>
                                                     <div className="flex items-center gap-3">
-                                                        <Avatar className="h-8 w-8 border border-white shadow-sm">
-                                                            <AvatarFallback className="text-[10px] font-bold text-slate-600 bg-slate-100">{p.name.charAt(0)}</AvatarFallback>
+                                                        <Avatar className="h-7 w-7 border border-slate-200 rounded-md">
+                                                            <AvatarFallback className="text-[9px] font-black text-slate-500 bg-slate-100 uppercase">{p.name.charAt(0)}</AvatarFallback>
                                                         </Avatar>
-                                                        <span className="text-sm font-bold text-slate-700 group-hover:text-red-800 transition-colors">{p.name}</span>
+                                                        <span className="text-[11px] font-bold text-slate-900 uppercase tracking-tight group-hover:text-red-700 transition-colors">{p.name}</span>
                                                     </div>
-                                                    <Badge className="bg-white text-red-600 border border-red-100 shadow-sm font-mono text-[10px] px-2">
-                                                        {p.daysSinceLastVisit}d
-                                                    </Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Last Visit:</span>
+                                                        <div className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                                                            {p.daysSinceLastVisit}d
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))
                                         )}
@@ -377,36 +405,35 @@ export default function ReportsPage() {
                                 </div>
 
                                 {/* 90 Days */}
-                                <div className="bg-white rounded-[24px] border border-amber-100 shadow-[0_4px_20px_rgba(255,251,235,0.5)] overflow-hidden relative">
-                                    <div className="absolute top-0 right-0 p-4 opacity-[0.05] pointer-events-none">
-                                        <Clock size={80} className="text-amber-900" />
-                                    </div>
-
-                                    <div className="p-5 pb-2 flex items-center justify-between">
-                                        <span className="text-xs font-bold text-amber-600 uppercase tracking-widest flex items-center gap-2">
+                                <div className="bg-white rounded-[10px] border border-slate-200 overflow-hidden relative">
+                                    <div className="flex items-center justify-between p-4 bg-slate-50/50 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
                                             <div className="h-2 w-2 rounded-full bg-amber-500"></div>
-                                            Overdue {'>'} 90 Days
-                                        </span>
-                                        <Badge className="bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100">{monitoringGaps.over90.length}</Badge>
+                                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Warning: Overdue {'>'} 90 Days</span>
+                                        </div>
+                                        <div className="text-xs font-black text-amber-600 underline decoration-amber-200 underline-offset-4">{monitoringGaps.over90.length}</div>
                                     </div>
 
-                                    <div className="p-2 space-y-1">
+                                    <div className="divide-y divide-slate-50">
                                         {monitoringGaps.over90.length === 0 ? (
-                                            <div className="p-6 text-center">
-                                                <p className="text-xs text-slate-400 font-medium">All monitored.</p>
+                                            <div className="p-8 text-center bg-white">
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Continuous Monitoring:<br />Active Surveillance Stable</p>
                                             </div>
                                         ) : (
-                                            monitoringGaps.over90.slice(0, 3).map(p => (
-                                                <div key={p._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-amber-50/60 transition-colors cursor-pointer group" onClick={() => router.push(`/doctor/patients/${p._id}`)}>
+                                            monitoringGaps.over90.slice(0, 5).map(p => (
+                                                <div key={p._id} className="flex items-center justify-between p-3.5 hover:bg-slate-50/80 transition-all cursor-pointer group border-l-4 border-l-amber-500" onClick={() => router.push(`/doctor/patients/${p._id}`)}>
                                                     <div className="flex items-center gap-3">
-                                                        <Avatar className="h-8 w-8 border border-white shadow-sm">
-                                                            <AvatarFallback className="text-[10px] font-bold text-slate-600 bg-slate-100">{p.name.charAt(0)}</AvatarFallback>
+                                                        <Avatar className="h-7 w-7 border border-slate-200 rounded-md">
+                                                            <AvatarFallback className="text-[9px] font-black text-slate-500 bg-slate-100 uppercase">{p.name.charAt(0)}</AvatarFallback>
                                                         </Avatar>
-                                                        <span className="text-sm font-bold text-slate-700 group-hover:text-amber-800 transition-colors">{p.name}</span>
+                                                        <span className="text-[11px] font-bold text-slate-900 uppercase tracking-tight group-hover:text-amber-700 transition-colors">{p.name}</span>
                                                     </div>
-                                                    <Badge className="bg-white text-amber-600 border border-amber-100 shadow-sm font-mono text-[10px] px-2">
-                                                        {p.daysSinceLastVisit}d
-                                                    </Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Last Visit:</span>
+                                                        <div className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                                                            {p.daysSinceLastVisit}d
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))
                                         )}
