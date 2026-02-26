@@ -50,8 +50,8 @@ router.put('/update-password-secure', protect, updatePasswordSecure);
 
 // NEW: Phone Verification Routes
 // WhatsApp OTP Routes
-router.post('/request-whatsapp-otp', protect, require('../controllers/authController').requestWhatsAppOtp);
-router.put('/verify-whatsapp-otp', protect, require('../controllers/authController').verifyWhatsAppOtp);
+router.post('/request-sms-otp', protect, require('../controllers/authController').requestSmsOtp);
+router.put('/verify-sms-otp', protect, require('../controllers/authController').verifySmsOtp);
 
 // Route for the initial "Select Doctor" dropdown
 router.get('/doctors', protect, async (req, res) => {

@@ -7,7 +7,7 @@ const streamifier = require('streamifier');
 const twilio = require('twilio'); // Re-added for WhatsApp
 
 // Initialize Twilio Client
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN, process.env.TWILIO_PHONE_NUMBER);
 
 // 1. CONFIGURE CLOUDINARY
 cloudinary.config({
@@ -21,9 +21,11 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-// --- WhatsApp OTP Functions ---
 
-const requestWhatsAppOtp = async (req, res) => {
+
+// --- SMS OTP Functions ---
+
+const requestSmsOtp = async (req, res) => {
   const { phoneNumber } = req.body; // Expecting E.164 format (e.g. +91...)
 
   try {
@@ -41,31 +43,53 @@ const requestWhatsAppOtp = async (req, res) => {
     // Sanitize Phone Number (Remove spaces, dashes, parens)
     const sanitizedPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
 
-    // Send WhatsApp Message
+    // Send Standard SMS via Twilio
     await twilioClient.messages.create({
       body: `Your CliniqueAI verification code is: ${otp}`,
-      from: 'whatsapp:+14155238886', // Twilio Sandbox Number
-      to: `whatsapp:${sanitizedPhone}`
+      // CHANGE THIS to your actual Twilio phone number (must be bought/verified in Twilio console)
+      from: process.env.TWILIO_PHONE_NUMBER, 
+      to: sanitizedPhone // Removed the 'whatsapp:' prefix
     });
 
-    res.status(200).json({ message: "WhatsApp OTP sent successfully." });
+    res.status(200).json({ message: "SMS OTP sent successfully." });
   } catch (error) {
-    console.error("Twilio WhatsApp Error:", error);
-    res.status(500).json({ message: "Failed to send WhatsApp OTP.", error: error.message });
+    console.error("Twilio SMS Error:", error);
+    res.status(500).json({ message: "Failed to send SMS OTP.", error: error.message });
   }
 };
 
-const verifyWhatsAppOtp = async (req, res) => {
+const verifySmsOtp = async (req, res) => {
   const { otp, phoneNumber } = req.body;
 
   try {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.verificationCode !== otp || user.verificationCodeExpire < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
+    // 1. Log the values to see exactly what is being compared
+    console.log(`🔍 Verifying OTP for User: ${user.email}`);
+    console.log(`   Expected OTP: '${user.verificationCode}'`);
+    console.log(`   Received OTP: '${otp}'`);
+    console.log(`   Current Time: ${Date.now()}`);
+    console.log(`   Expire Time:  ${user.verificationCodeExpire}`);
+
+    // 2. Ensure both are treated as strings and trimmed of whitespace
+    const expectedOtp = String(user.verificationCode).trim();
+    const receivedOtp = String(otp).trim();
+
+    // 3. Perform the checks with clear error messages
+    if (expectedOtp !== receivedOtp) {
+      console.warn("⚠️ OTP Mismatch!");
+      return res.status(400).json({ message: "Invalid OTP code entered." });
     }
 
+    if (user.verificationCodeExpire < Date.now()) {
+      console.warn("⚠️ OTP Expired!");
+      return res.status(400).json({ message: "This OTP has expired. Please request a new one." });
+    }
+
+    // 4. Success! Proceed with updates
+    console.log("✅ OTP Verified Successfully!");
+    
     // Update Phone
     user.mobileNumber = phoneNumber;
     user.isMobileVerified = true;
@@ -589,7 +613,7 @@ module.exports = {
   toggle2FA,
   googleLogin,
   requestPasswordChangeOtp,
-  requestWhatsAppOtp,
-  verifyWhatsAppOtp,
+  requestSmsOtp,
+  verifySmsOtp,
   getUserPublicProfile
 };
