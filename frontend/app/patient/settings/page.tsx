@@ -170,12 +170,12 @@ export default function PatientSettingsPage() {
 
         setOtpLoading(true);
         try {
-            await api.post("/auth/request-whatsapp-otp", { phoneNumber: formattedPhone });
+            await api.post("/auth/request-sms-otp", { phoneNumber: formattedPhone });
             setOtpSent(true);
-            toast.success("WhatsApp Code Sent!", { description: `Check WhatsApp on ${formattedPhone}` });
+            toast.success("SMS Code Sent!", { description: `Check ${formattedPhone} for your code.` });
         } catch (error: any) {
-            console.error("WhatsApp OTP Error:", error);
-            toast.error(error.response?.data?.message || "Failed to send WhatsApp code.");
+            console.error("SMS OTP Error:", error);
+            toast.error(error.response?.data?.message || "Failed to send SMS code.");
         } finally {
             setOtpLoading(false);
         }
@@ -188,7 +188,7 @@ export default function PatientSettingsPage() {
 
         setOtpLoading(true);
         try {
-            const { data } = await api.put("/auth/verify-whatsapp-otp", {
+            const { data } = await api.put("/auth/verify-sms-otp", {
                 phoneNumber: formattedPhone,
                 otp: phoneOtp
             });
