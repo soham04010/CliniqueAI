@@ -176,7 +176,10 @@ def copilot():
     
     User Query: {user_message}
     
-    Provide extremely short, bulleted answers. Max 2-3 sentences. Focus strictly on key insights. No filler words.
+    STRICT BOUNDARY:
+    - Only answer questions related to the provided patient data, clinical indicators, or medical practice.
+    - If the query is unrelated (e.g., general knowledge, jokes, programming, politics, or non-medical topics), you MUST respond with: "As a specialized Clinical Co-Pilot, I am restricted to providing insights on medical data and patient clinical context only."
+    - Provide extremely short, bulleted answers. Max 2-3 sentences. Focus strictly on key insights. No filler words.
     """
 
     # --- PATIENT PERSONA ---
@@ -194,6 +197,10 @@ def copilot():
     HbA1c: {context.get('inputs', {}).get('HbA1c_level', 'N/A')}
     Smoking: {context.get('inputs', {}).get('smoking_history', 'N/A')}
 
+    STRICT BOUNDARY:
+    - Only answer questions regarding your health data, vitals, or medical wellness.
+    - If the user asks anything unrelated to their health (e.g., casual talk, non-medical advice, trivia), politely respond: "I am specifically designed to assist with your health management. Please ask me about your vitals or risk factors."
+    
     YOUR GUIDELINES:
     1. Tone: Warm but very direct.
     2. Length: Max 2-3 short sentences. No fluff.
@@ -240,7 +247,7 @@ def copilot():
             "Content-Type": "application/json"
         }
         payload = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "GPT-OSS-120B",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
