@@ -1,4 +1,45 @@
-node_modules
+# Dependency directories
+node_modules/
+
+# Environment variables
 .env
 .env.local
+.env.development
+.env.test
+.env.production
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Next.js build output
 .next
+out/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Python & AI Engine ---
+
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Python Cache (Creates messy folders everywhere)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python Environment Variables
+Ai/.env
+*.env
+
+# Machine Learning Models (Optional)
+# If your .pkl files are over 100MB, GitHub will block them. 
+# Remove the '#' below if your models are massive.
+# *.pkl
