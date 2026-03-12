@@ -14,7 +14,8 @@ import {
   Server,
   Scan,
   TrendingUp,
-  ShieldAlert
+  ShieldAlert,
+  Play
 } from "lucide-react";
 import {
   motion,
@@ -342,9 +343,18 @@ export default function LandingPage() {
               </Link>
             </Magnetic>
             <Magnetic>
-              <Button variant="ghost" className="h-14 px-10 text-sm font-bold uppercase tracking-widest text-white border border-white/10 bg-white/5 backdrop-blur-md rounded-xl gap-3 transition-all hover:bg-white/10 hover:border-teal-500/30">
-                Watch Outcomes Demo
-              </Button>
+              <Link
+                href="https://youtu.be/EOP3UaK2dEw?si=Rn5Y8CZdjb4v620t"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="ghost" className="h-14 px-10 text-sm font-bold uppercase tracking-widest text-white border border-white/10 bg-white/5 backdrop-blur-md rounded-xl gap-3 transition-all hover:bg-white/10 hover:border-teal-500/30 group/btn">
+                  <div className="size-6 rounded-full bg-teal-500/20 flex items-center justify-center group-hover/btn:bg-teal-500/40 transition-colors">
+                    <Play className="h-3 w-3 text-teal-400 fill-teal-400" />
+                  </div>
+                  Watch Outcomes Demo
+                </Button>
+              </Link>
             </Magnetic>
           </motion.div>
         </div>
