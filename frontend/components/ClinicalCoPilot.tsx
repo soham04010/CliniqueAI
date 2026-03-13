@@ -13,9 +13,7 @@ interface CoPilotProps {
 export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState("");
-    const [messages, setMessages] = useState<any[]>([
-        { role: 'system', content: "Hello. I am your AI Clinical Co-Pilot. I can explain risk factors, summarize trends, or suggest interventions based on the active patient context." }
-    ]);
+    const [messages, setMessages] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasMounted, setHasMounted] = useState(false); // Controls visibility (hidden -> flex)
     const [canAnimate, setCanAnimate] = useState(false); // Controls transition (none -> active)
@@ -26,8 +24,20 @@ export default function ClinicalCoPilot({ patientContext }: CoPilotProps) {
         setHasMounted(true);
         // Delay enabling transitions to prevent initial slide-in/out flash
         const timer = setTimeout(() => setCanAnimate(true), 1000);
+
+        // Set initial message based on context
+        if (!patientContext || (!patientContext._id && !patientContext.id)) {
+            setMessages([
+                { role: 'system', content: "Hello! I am your AI Clinical Co-Pilot. I'm currently in **General Mode** because no patient is selected. You can ask me general clinical questions, or select a patient to see specific risk analysis." }
+            ]);
+        } else {
+            setMessages([
+                { role: 'system', content: `Hello! I am your AI Clinical Co-Pilot. I'm analyzing **${patientContext.name}**'s profile. I can explain their risk factors, summarize trends, or suggest interventions.` }
+            ]);
+        }
+
         return () => clearTimeout(timer);
-    }, []);
+    }, [patientContext]);
 
     if (!pathname.includes("/doctor") && !pathname.includes("/patient")) return null;
 
