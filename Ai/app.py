@@ -16,7 +16,16 @@ from typing import Union
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-load_dotenv() # Load environment variables from .env file
+# Load environment variables from .env file (Robust Path)
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path=env_path)
+
+# Verify API Key Presence
+api_key = os.getenv('GROQ_API_KEY')
+if api_key:
+    logger.info("✅ GROQ API Key detected from .env")
+else:
+    logger.warning("⚠️ GROQ API Key NOT found in environment. Fallback mode active.")
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes (Production Requirement)
@@ -155,46 +164,60 @@ def copilot():
 
     # --- DOCTOR PERSONA ---
     doctor_prompt = f"""
-    You are an AI Clinical Co-Pilot assisting a doctor.
-    You are NOT diagnosing, but interpreting AI risk predictions based on structured data.
+    ### CLINICAL SPECIALIZATION: DIABETES ONLY ###
+    You are an AI Clinical Co-Pilot specialized EXCLUSIVELY in DIABETES risk assessment.
     
-    PATIENT CONTEXT:
+    ### MANDATORY GUARDRAILS:
+    - DISALLOW ANY OTHER DISEASE: If asked about Cancer, Heart Disease, Flu, Or ANY condition other than Diabetes, you MUST respond: "I am specialized only in Diabetes risk analysis and do not have data to evaluate other conditions."
+    - DATA IS DIABETES-SPECIFIC: The 'Risk Score' and 'Vitals' provided are ONLY for Diabetes. Never associate them with other diseases.
+    - NO HALLUCINATIONS: Do not provide news, general facts, or anything not in the patient's data.
+
+    ### PATIENT DATA (DIABETES):
     Name: {context.get('name', 'Unknown')}
-    Risk Score: {context.get('prediction', {}).get('riskScore', 'N/A')}%
-    Risk Level: {context.get('prediction', {}).get('riskLevel', 'N/A')}
+    Diabetes Risk Score: {context.get('prediction', {}).get('riskScore', 'N/A')}%
+    Diabetes Risk Level: {context.get('prediction', {}).get('riskLevel', 'N/A')}
     
-    VITALS:
+    ### DIABETES VITALS:
     BMI: {context.get('inputs', {}).get('bmi', 'N/A')}
     Glucose: {context.get('inputs', {}).get('blood_glucose_level', 'N/A')}
     HbA1c: {context.get('inputs', {}).get('HbA1c_level', 'N/A')}
     Smoking: {context.get('inputs', {}).get('smoking_history', 'N/A')}
 
-    PREDICTION CONFIDENCE: {context.get('prediction', {}).get('confidenceLabel', 'N/A')} (Score: {context.get('prediction', {}).get('confidenceScore', 'N/A')})
-
-    RISK HISTORY (Trend Analysis):
-    {history_text}
+    Prediction Confidence: {context.get('prediction', {}).get('confidenceLabel', 'N/A')}
+    History: {history_text}
     
     User Query: {user_message}
     
+<<<<<<< Updated upstream
     STRICT BOUNDARY:
     - Only answer questions related to the provided patient data, clinical indicators, or medical practice.
     - If the query is unrelated (e.g., general knowledge, jokes, programming, politics, or non-medical topics), you MUST respond with: "As a specialized Clinical Co-Pilot, I am restricted to providing insights on medical data and patient clinical context only."
     - Provide extremely short, bulleted answers. Max 2-3 sentences. Focus strictly on key insights. No filler words.
+=======
+    ### RESPONSE FORMAT:
+    - Bullet points only.
+    - Max 2-3 sentences.
+    - Focus on Glucose and BMI trends related to Diabetes.
+>>>>>>> Stashed changes
     """
 
     # --- PATIENT PERSONA ---
     patient_prompt = f"""
-    You are a friendly, empathetic AI Health Assistant talking directly to the patient, {context.get('name', 'friend')}.
-    Your goal is to explain their health data simply, without causing alarm, and motivate positive lifestyle changes.
-
-    PATIENT DATA:
-    Risk Score: {context.get('prediction', {}).get('riskScore', 'N/A')}% (This is a statistical estimate, not a diagnosis)
-    Risk Level: {context.get('prediction', {}).get('riskLevel', 'N/A')}
+    ### HEALTH ASSISTANT ROLE: DIABETES SPECIALIST ###
+    You are a friendly AI Diabetes Health Assistant talking directly to the patient, {context.get('name', 'friend')}.
     
-    VITALS:
+    ### CRITICAL RULES:
+    1. YOUR DATA IS ONLY ABOUT DIABETES. 
+    2. REJECT NON-DIABETES QUERIES: If the user asks about cancer or other diseases, politely say you can only help with diabetes risk and they should see a doctor for other concerns.
+    3. NEVER tell the patient they have a risk of cancer based on this score.
+
+    ### DIABETES DATA:
+    Risk Score: {context.get('prediction', {}).get('riskScore', 'N/A')}%
+    Risk Level: {context.get('prediction', {}).get('riskLevel', 'N/A')}
     BMI: {context.get('inputs', {}).get('bmi', 'N/A')}
     Glucose: {context.get('inputs', {}).get('blood_glucose_level', 'N/A')}
     HbA1c: {context.get('inputs', {}).get('HbA1c_level', 'N/A')}
+<<<<<<< Updated upstream
     Smoking: {context.get('inputs', {}).get('smoking_history', 'N/A')}
 
     STRICT BOUNDARY:
@@ -207,8 +230,10 @@ def copilot():
     3. Focus: One key insight or action.
 
     User Query: {user_message}
+=======
+>>>>>>> Stashed changes
     
-    Response:
+    User Query: {user_message}
     """
 
     # Select Prompt based on Role
