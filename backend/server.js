@@ -50,12 +50,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// 3.5 Global Request Logger
-app.use((req, res, next) => {
-  console.log(`📡 Incoming Request: [${req.method}] ${req.originalUrl}`);
-  next();
-});
-
 // 4. Health Check
 app.get('/', (req, res) => {
   res.send('API is running...');
@@ -116,45 +110,6 @@ io.on("connection", (socket) => {
   });
 });
 
-
-// 5.7 Health Check & Route Listing
-app.get('/api/test', (req, res) => {
-  res.json({ message: "API route is working!", date: new Date().toISOString() });
-});
-
-app.get('/api/routes', (req, res) => {
-  const routes = [];
-  try {
-    app._router.stack.forEach(r => {
-      if (r.route) {
-        routes.push(`${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
-      } else if (r.name === 'router' && r.handle && r.handle.stack) {
-        const base = r.regexp.toString()
-          .replace('/^', '')
-          .replace('\\/?(?=\\/|$)/i', '')
-          .replace(/\\\//g, '/')
-          .replace('(?:/(?=$))?', '');
-        r.handle.stack.forEach(sr => {
-          if (sr.route) {
-            routes.push(`${Object.keys(sr.route.methods).join(',').toUpperCase()} ${base}${sr.route.path}`);
-          }
-        });
-      }
-    });
-    res.json({ count: routes.length, routes });
-  } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack });
-  }
-});
-
-app.post('/api/test-login', (req, res) => {
-  res.json({ 
-    message: "POST test route works!", 
-    receivedBody: req.body,
-    timestamp: new Date().toISOString() 
-  });
-});
-
 // 6. API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/patients', require('./routes/patientRoutes'));
@@ -166,22 +121,6 @@ app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err.stack);
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
-
-// 8. Route Visualizer (Debug) - Moved to bottom to avoid crash
-if (app._router && app._router.stack) {
-  console.log("🛠️ --- Mounted API Routes ---");
-  app._router.stack.forEach(r => {
-    if (r.route && r.route.path) {
-      console.log(`✅ [${Object.keys(r.route.methods)}] ${r.route.path}`);
-    } else if (r.name === 'router') {
-      r.handle.stack.forEach(sr => {
-        if (sr.route && sr.route.path) {
-          console.log(`✅ [${Object.keys(sr.route.methods)}] ${r.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '')}${sr.route.path}`);
-        }
-      });
-    }
-  });
-}
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
