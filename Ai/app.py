@@ -273,7 +273,7 @@ def copilot():
         }
         payload = {
             "model": "openai/gpt-oss-120b",
-            "messages": [
+                "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],

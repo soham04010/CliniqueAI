@@ -110,6 +110,11 @@ io.on("connection", (socket) => {
   });
 });
 
+// 5.5 Debug Route
+app.get('/api/test', (req, res) => {
+  res.json({ message: "API route is working!", date: new Date().toISOString() });
+});
+
 // 6. API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/patients', require('./routes/patientRoutes'));
