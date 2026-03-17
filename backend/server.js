@@ -50,6 +50,12 @@ app.use(cors({
 
 app.use(express.json());
 
+// 3.5 Global Request Logger
+app.use((req, res, next) => {
+  console.log(`📡 Incoming Request: [${req.method}] ${req.originalUrl}`);
+  next();
+});
+
 // 4. Health Check
 app.get('/', (req, res) => {
   res.send('API is running...');
@@ -111,9 +117,30 @@ io.on("connection", (socket) => {
 });
 
 
-// 5.7 Health Check
+// 5.7 Health Check & Route Listing
 app.get('/api/test', (req, res) => {
   res.json({ message: "API route is working!", date: new Date().toISOString() });
+});
+
+app.get('/api/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach(r => {
+    if (r.route) {
+      routes.push(`${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
+    } else if (r.name === 'router') {
+      const base = r.regexp.toString()
+        .replace('/^', '')
+        .replace('\\/?(?=\\/|$)/i', '')
+        .replace(/\\\//g, '/')
+        .replace('(?:/(?=$))?', '');
+      r.handle.stack.forEach(sr => {
+        if (sr.route) {
+          routes.push(`${Object.keys(sr.route.methods).join(',').toUpperCase()} ${base}${sr.route.path}`);
+        }
+      });
+    }
+  });
+  res.json({ count: routes.length, routes });
 });
 
 // 6. API Routes
