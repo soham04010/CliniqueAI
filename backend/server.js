@@ -110,19 +110,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// 5.6 Route Visualizer (Debug)
-console.log("🛠️ --- Mounted API Routes ---");
-app._router.stack.forEach(r => {
-  if (r.route && r.route.path) {
-    console.log(`✅ [${Object.keys(r.route.methods)}] ${r.route.path}`);
-  } else if (r.name === 'router') {
-    r.handle.stack.forEach(sr => {
-      if (sr.route && sr.route.path) {
-        console.log(`✅ [${Object.keys(sr.route.methods)}] ${r.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '')}${sr.route.path}`);
-      }
-    });
-  }
-});
 
 // 5.7 Health Check
 app.get('/api/test', (req, res) => {
@@ -140,6 +127,22 @@ app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err.stack);
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
+
+// 8. Route Visualizer (Debug) - Moved to bottom to avoid crash
+if (app._router && app._router.stack) {
+  console.log("🛠️ --- Mounted API Routes ---");
+  app._router.stack.forEach(r => {
+    if (r.route && r.route.path) {
+      console.log(`✅ [${Object.keys(r.route.methods)}] ${r.route.path}`);
+    } else if (r.name === 'router') {
+      r.handle.stack.forEach(sr => {
+        if (sr.route && sr.route.path) {
+          console.log(`✅ [${Object.keys(sr.route.methods)}] ${r.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '')}${sr.route.path}`);
+        }
+      });
+    }
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
