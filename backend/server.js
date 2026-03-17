@@ -124,23 +124,27 @@ app.get('/api/test', (req, res) => {
 
 app.get('/api/routes', (req, res) => {
   const routes = [];
-  app._router.stack.forEach(r => {
-    if (r.route) {
-      routes.push(`${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
-    } else if (r.name === 'router') {
-      const base = r.regexp.toString()
-        .replace('/^', '')
-        .replace('\\/?(?=\\/|$)/i', '')
-        .replace(/\\\//g, '/')
-        .replace('(?:/(?=$))?', '');
-      r.handle.stack.forEach(sr => {
-        if (sr.route) {
-          routes.push(`${Object.keys(sr.route.methods).join(',').toUpperCase()} ${base}${sr.route.path}`);
-        }
-      });
-    }
-  });
-  res.json({ count: routes.length, routes });
+  try {
+    app._router.stack.forEach(r => {
+      if (r.route) {
+        routes.push(`${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
+      } else if (r.name === 'router' && r.handle && r.handle.stack) {
+        const base = r.regexp.toString()
+          .replace('/^', '')
+          .replace('\\/?(?=\\/|$)/i', '')
+          .replace(/\\\//g, '/')
+          .replace('(?:/(?=$))?', '');
+        r.handle.stack.forEach(sr => {
+          if (sr.route) {
+            routes.push(`${Object.keys(sr.route.methods).join(',').toUpperCase()} ${base}${sr.route.path}`);
+          }
+        });
+      }
+    });
+    res.json({ count: routes.length, routes });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
 });
 
 app.post('/api/test-login', (req, res) => {
