@@ -110,7 +110,21 @@ io.on("connection", (socket) => {
   });
 });
 
-// 5.5 Debug Route
+// 5.6 Route Visualizer (Debug)
+console.log("🛠️ --- Mounted API Routes ---");
+app._router.stack.forEach(r => {
+  if (r.route && r.route.path) {
+    console.log(`✅ [${Object.keys(r.route.methods)}] ${r.route.path}`);
+  } else if (r.name === 'router') {
+    r.handle.stack.forEach(sr => {
+      if (sr.route && sr.route.path) {
+        console.log(`✅ [${Object.keys(sr.route.methods)}] ${r.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '')}${sr.route.path}`);
+      }
+    });
+  }
+});
+
+// 5.7 Health Check
 app.get('/api/test', (req, res) => {
   res.json({ message: "API route is working!", date: new Date().toISOString() });
 });
