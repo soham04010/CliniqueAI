@@ -27,7 +27,6 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Public Routes
-router.get('/login', (req, res) => res.json({ message: "Auth route is mounted! Casing is correct." }));
 router.post('/register', registerUser);
 router.post('/verify-otp', verifyOTP);
 router.post('/login', loginUser);
