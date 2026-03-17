@@ -143,6 +143,14 @@ app.get('/api/routes', (req, res) => {
   res.json({ count: routes.length, routes });
 });
 
+app.post('/api/test-login', (req, res) => {
+  res.json({ 
+    message: "POST test route works!", 
+    receivedBody: req.body,
+    timestamp: new Date().toISOString() 
+  });
+});
+
 // 6. API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/patients', require('./routes/patientRoutes'));
